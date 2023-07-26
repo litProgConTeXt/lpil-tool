@@ -1,0 +1,61 @@
+{
+  "name": "lpil-tool",
+  "version": "0.0.1",
+  "description": "A javascript tool to extract and build code from Literate Programming in LaTeX documents",
+  "main": "src/lpil.mjs",
+  "type": "commonjs",
+  "scripts": {
+    "//build": "echo Building: clean, check, build, buildTests, test",
+    "clean": "rm -rf dist",
+    "check": "tsc",
+    "build": "swc --config-file swc.json --out-dir dist/src src/*.ts src/**/*.ts",
+    "buildTests": "swc --config-file swc.json --out-dir dist/test test/**/*.ts",
+    "test": "npm run check && npm run build && npm run buildTests && mocha dist/test",
+    "//docs": "echo Documenting: cleanDocs, docs, read",
+    "cleanDocs": "rm -rf docs",
+    "docs": "typedoc",
+    "read": "npm run docs && open docs/index.html",
+    "//deps": "echo Dependecies: deps, unused",
+    "deps": "dpdm ./src/tmgt.ts",
+    "unused": "dpdm --no-tree --no-warning --no-circular --detect-unused-files-from 'src/**/*.*' './src/tmgt.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/litProgConTeXt/lpil-tool.git"
+  },
+  "keywords": [
+    "Literate",
+    "Programming",
+    "LaTeX"
+  ],
+  "author": "Stephen Gaito",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/litProgConTeXt/lpil-tool/issues"
+  },
+  "homepage": "https://github.com/litProgConTeXt/lpil-tool#readme",
+  "devDependencies": {
+    "@mxssfd/typedoc-theme": "^1.1.2",
+    "@swc/cli": "^0.1.62",
+    "@swc/core": "^1.3.66",
+    "@types/chai": "^4.3.5",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^20.3.1",
+    "@types/sinon": "^10.0.15",
+    "chai": "^4.3.7",
+    "dpdm": "^3.13.1",
+    "mocha": "^10.2.0",
+    "sinon": "^15.1.2",
+    "typedoc": "^0.24.8",
+    "typedoc-plugin-missing-exports": "^2.0.0",
+    "typescript": "^5.1.3"
+  },
+  "dependencies": {
+    "@ltd/j-toml": "^1.38.0",
+    "commander": "^10.0.1",
+    "deepcopy": "^2.1.0",
+    "lpic-modules": "github:litProgConTeXt/lpic-modules",
+    "lpic-syntaxes": "github:litProgConTeXt/lpic-syntaxes",
+    "yaml": "^2.2.1"
+  }
+}

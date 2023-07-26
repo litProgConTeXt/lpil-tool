@@ -1,0 +1,17 @@
+{
+  "module" : {
+    "type" : "commonjs"
+  },
+  "jsc" : {
+    "target" : "es2017",
+    "parser" : {
+      "syntax" : "typescript",
+      "decorators" : true,
+      "topLevelAwait" : true
+    },
+    "transform" : {
+      "legacyDecorator" : false,
+      "decoratorVersion" : "2022-03"
+    }
+  }
+}

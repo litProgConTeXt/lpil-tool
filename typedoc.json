@@ -1,0 +1,18 @@
+{
+  "name"               : "LPiC code extraction tool",
+  "readme"             : "Readme.md",
+  "commentStyle"       : "all",
+  "entryPoints"        : ["src", "test"],
+  "entryPointStrategy" : "expand",
+  "out"                : "docs",
+  "categorizeByGroup"  : false,
+  // Theme:
+  // see: https://github.com/mengxinssfd/typedoc-theme
+  "theme" : "my-theme",
+  // see: https://www.npmjs.com/package/typedoc-plugin-missing-exports
+  "excludeExternals"   : true,
+  "plugin" : [
+    "@mxssfd/typedoc-theme",
+    "typedoc-plugin-missing-exports",
+  ]
+}
