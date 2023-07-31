@@ -54,8 +54,7 @@
     "@ltd/j-toml": "^1.38.0",
     "commander": "^10.0.1",
     "deepcopy": "^2.1.0",
-    "lpic-modules": "github:litProgConTeXt/lpic-modules",
-    "lpic-syntaxes": "github:litProgConTeXt/lpic-syntaxes",
+    "lpil-modules": "github:litProgLaTeX/lpil-modules",
     "yaml": "^2.2.1"
   }
 }

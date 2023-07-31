@@ -1,5 +1,5 @@
 {
-  "name"               : "LPiC code extraction tool",
+  "name"               : "LPiL code extraction tool",
   "readme"             : "Readme.md",
   "commentStyle"       : "all",
   "entryPoints"        : ["src", "test"],

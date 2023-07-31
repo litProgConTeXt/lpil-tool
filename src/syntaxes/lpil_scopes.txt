@@ -1,0 +1,13 @@
+keyword.control.builddescription.lpil
+keyword.control.builddescription.start.lpil
+keyword.control.builddescription.stop.lpil
+keyword.control.creates.lpil
+keyword.control.newcodetype.lpil
+keyword.control.requires.lpil
+keyword.control.simple.arg.lpil
+keyword.control.source.start.lpil
+keyword.control.source.stop.lpil
+keyword.control.source.type.lpil
+keyword.control.subfile.lpil
+meta.control.builddescription
+source.lpilcode.lpil

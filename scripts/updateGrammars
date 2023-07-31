@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd RubyGrammars
+
+./lpil-grammar
