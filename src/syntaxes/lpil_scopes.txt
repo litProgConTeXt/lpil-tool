@@ -1,3 +1,5 @@
+keyword.control.amble.lpil
+keyword.control.amble.path.lpil
 keyword.control.builddescription.lpil
 keyword.control.builddescription.start.lpil
 keyword.control.builddescription.stop.lpil
@@ -8,6 +10,6 @@ keyword.control.simple.arg.lpil
 keyword.control.source.start.lpil
 keyword.control.source.stop.lpil
 keyword.control.source.type.lpil
-keyword.control.subfile.lpil
+keyword.control.structure.lpil
 meta.control.builddescription
 source.lpilcode.lpil

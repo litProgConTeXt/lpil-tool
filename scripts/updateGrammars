@@ -3,3 +3,9 @@
 cd RubyGrammars
 
 ./lpil-grammar
+
+cd ..
+
+mkdir -p dist/src
+
+cp -R src/syntaxes dist/src

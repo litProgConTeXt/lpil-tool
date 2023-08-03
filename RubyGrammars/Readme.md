@@ -37,14 +37,3 @@ Two good guides to writing Textmate Grammars are:
 
 The **[oniguruma](https://github.com/kkos/oniguruma) regular expression
 [syntax](https://github.com/kkos/oniguruma/blob/master/doc/RE)**
-
-## Converting existing grammars to Ruby Grammar format...
-
-The very crude tool `plist2rbGrammar` in the `OriginalGrammars` directory can be
-used to translate an existing grammar (in PList format) into a *rough*
-approximation of a Ruby Grammar. Unfortunately any Ruby Grammar created using
-the `plist2rbGrammar` tool WILL need editing!
-
-At the moment the only existing grammars we have converted are:
-
-  - `context.tmLanguage` (from the `OriginalGrammars` directory)

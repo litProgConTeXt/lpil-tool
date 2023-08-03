@@ -11,7 +11,10 @@
   ],
   "patterns": [
     {
-      "include": "#subfile"
+      "include": "#ambles"
+    },
+    {
+      "include": "#components"
     },
     {
       "include": "#newcodetype"
@@ -30,6 +33,24 @@
     }
   ],
   "repository": {
+    "ambles": {
+      "match": "\\%\\s+\\!LPiL\\s+(?:(?:preamble)|(?:postamble))\\s+=\\s+(\\S+)\\s",
+      "captures": {
+        "1": {
+          "name": "keyword.control.amble.path.lpil"
+        }
+      },
+      "name": "keyword.control.amble.lpil"
+    },
+    "components": {
+      "match": "(?:(?:\\\\input)|(?:\\\\include))[\\[\\(\\{](\\S+)[\\]\\)\\}]",
+      "captures": {
+        "1": {
+          "name": "keyword.control.simple.arg.lpil"
+        }
+      },
+      "name": "keyword.control.structure.lpil"
+    },
     "lpilbuild": {
       "begin": "\\\\begin\\{lpilBuild\\}[\\[\\(\\{](\\S+)[\\]\\)\\}][\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
       "end": "\\\\end\\{lpilBuild\\}\\W",
@@ -64,8 +85,8 @@
       ]
     },
     "lpilcode": {
-      "begin": "\\\\begin\\{lpil:(\\w)\\}[\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
-      "end": "\\\\end\\{lpil:(?:\\1)\\}\\W",
+      "begin": "\\\\begin\\{lpil\\:(\\w+)\\}[\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
+      "end": "\\\\end\\{lpil\\:((?:\\1))\\}\\W",
       "beginCaptures": {
         "0": {
           "name": "keyword.control.source.start.lpil"
@@ -80,6 +101,9 @@
       "endCaptures": {
         "0": {
           "name": "keyword.control.source.stop.lpil"
+        },
+        "1": {
+          "name": "keyword.control.source.type.lpil"
         }
       },
       "name": "source.lpilcode.lpil"
@@ -119,10 +143,6 @@
         }
       },
       "name": "keyword.control.newcodetype.lpil"
-    },
-    "subfile": {
-      "match": "(?:(?:\\\\input)|(?:\\\\include))",
-      "name": "keyword.control.subfile.lpil"
     }
   }
 }

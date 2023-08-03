@@ -1,0 +1,263 @@
+#!/bin/env python
+
+# This is a very simple and highly specific tool to:
+
+# 1. read the TeX-Magic comments in a TeX file to determine:
+#    - which program { lualatex or metafun(context) } to use
+#    - which preamble to (pre) load
+#    - which postamble to (post) load
+
+# 2. if needed, re-run the command until the associated "check" file has
+#    "stabilized" (this technique has been inspired by
+#    [texcaller](https://github.com/vog/texcaller)
+#    see: texcaller/c/texcaller.c
+#    and search for 'run command as often as necessary') 
+
+import os
+import sys
+
+
+def usage() :
+  print("""
+  usage: lpilMagicRunner <<aTeXFile>> [<<outputDir>>]
+  
+  where: 
+  
+    aTeXFile is a (manditory) TeX/LaTeX/ConTeXt document to be typeset
+    
+    outputDir is an (optional) directory in which to capture the outputs
+
+  This script looks for TeX-Magic comments in the top of the file to be typeset
+  which describe how to typeset the file.
+
+  This script understands the following TeX-Magic comments:
+
+    - `% !TEX program = <<aProgram>>`
+    - `% !LPiL preamble = <<aPreambleFile>>`
+    - `% !LPiL postamble = <<aPostambleFile>>`
+
+  The `program` magic comment specifies which "program" to use to typeset the
+  given document. This "program" must be one which the `lpilMagicRunner` script
+  knows how to typeset. 
+
+  At the moment the `lpilMagicRunner` script understands the following
+  "programs":
+
+    - `metafun` (essentially ConTeXt running its associated MetaFun package --
+      the output of which is converted to eps using `pdftops`)
+
+    - `lualatex` (the LuaLaTeX tool required by the lpil-latex style.)
+
+  The `preamble` and `postamble` magic comments specify LaTeX fragments to be
+  typeset immediately before or after the given `lualatex` document. This allows
+  the LPiL Magic Runner to fabricate complete LaTeX documents out of component
+  parts. This allows small parts of a very much larger document to be developed
+  more quickly in separation, using for example VSCode's LaTeX-Workshop.
+
+  """)
+  exit(1)
+
+if len(sys.argv) < 2 : usage()
+if -1 < sys.argv[1].find('-h') : usage()
+
+##############################################################################
+# setup our configuration
+
+# setup the various paths which define what/where and how to run...
+config = {}
+config['texFilePath']   = sys.argv[1]
+if not os.path.splitext(config['texFilePath'])[1] :
+  config['texFilePath'] = config['texFilePath']+'.tex'
+config['jobName']       = os.path.basename(
+  os.path.splitext(config['texFilePath'])[0]
+)
+config['outputDir']     = None
+if 2 < len(sys.argv) : 
+  config['outputDir']   = sys.argv[2]
+if not os.path.exists(config['outputDir']) : 
+  os.makedirs(config['outputDir'], exist_ok=True)
+config['curWorkingDir'] = os.getcwd()
+
+print(f"LPiLMagicRunner {config['texFilePath']} {config['outputDir']}")
+
+# set the default program, preamble and postambles
+config['program']       = "lualatex"
+config['preamble']      = None
+config['postamble']     = None
+
+# read the begining of the file looking for TeX-Magic comments
+with open(config['texFilePath']) as tf :
+  while True :
+    aLine = tf.readline()
+    if not aLine : break
+    aLine = aLine.strip()
+    if not aLine.startswith('%') :
+      if len(aLine) : break
+      else : continue
+    if not aLine.find('=') : continue
+    aLine = aLine.lower()
+    if -1 < aLine.find('!lpil') :
+      if -1 < aLine.find('preamble') :
+        config['preamble'] = aLine.split('=')[1].strip()
+      if -1 < aLine.find('postamble') :
+        config['postamble'] = aLine.split('=')[1].strip()
+    if -1 < aLine.find('!tex') and -1 < aLine.find('program') :
+      config['program'] = aLine.split('=')[1].strip()
+
+##############################################################################
+# define how to run the known commands
+
+def assembleCmd(progArgs, config) :
+  return " ".join(progArgs).format_map(config)
+
+def runMetafun(config) :
+  if config['outputDir'] : os.chdir(config['outputDir'])
+
+  dirSegs = []
+  for aSegment in config['outputDir'].split(os.sep) :
+    if 0 < len(aSegment) : dirSegs.append('..')
+  config['relTexFilePath'] = os.path.join(
+    *dirSegs, config['texFilePath']
+  )
+  
+  # metafun (context + pdftops)
+  metafunCmd = assembleCmd([
+      'context',
+      '--nonstopmode',
+      '--path={curWorkingDir}',
+      '{relTexFilePath}'
+    ], config)
+
+  print("-----------------------------------------------------------------")
+  print(f"outputDir: {os.getcwd()}")
+  print("metafun (context) cmd:")
+  print(metafunCmd)
+  print("-----------------------------------------------------------------")
+  sys.stdout.flush()
+  result = os.system(metafunCmd)
+  if result != 0 : 
+    print(f"ERROR: the metafun(context) command returned: [{result}]")
+    sys.exit(result)
+
+  # see: https://superuser.com/a/185404
+  pdftopdfCmd = assembleCmd([
+      'gs',
+      '-sDEVICE=pdfwrite',
+      '-dCompatibilityLevel=1.5',
+      '-o {jobName}_v1_5.pdf',
+      '{jobName}.pdf'
+    ], config)
+
+  print("-----------------------------------------------------------------")
+  print(f"outputDir: {os.getcwd()}")
+  print("pdf(1.7)->pdf(1.5) cmd:")
+  print(pdftopdfCmd)
+  print("-----------------------------------------------------------------")
+  sys.stdout.flush()
+  result = os.system(pdftopdfCmd)
+  if result != 0 : 
+    print(f"ERROR: the pdf(1.7)->pdf(1.5) command returned: [{result}]")
+    sys.exit(result)
+
+  pdftopsCmd = assembleCmd([
+      'pdftops',
+      '-eps',
+      '{jobName}.pdf'
+    ], config)
+
+  print("-----------------------------------------------------------------")
+  print(f"outputDir: {os.getcwd()}")
+  print("pdftops cmd:")
+  print(pdftopsCmd)
+  print("-----------------------------------------------------------------")
+  sys.stdout.flush()
+  result = os.system(pdftopsCmd)
+  if result != 0 : 
+    print(f"ERROR: the pdftops command returned: [{result}]")
+    sys.exit(result)
+  sys.exit(0)
+
+def runLuaLaTeX(config) :
+    checkFilePath = config['jobName']+'.aux'
+
+    lualatexCmd = [
+      'lualatex',
+      '--synctex=1',
+      '--interaction=nonstopmode',
+      '--file-line-error',
+      '--jobname={jobName}'
+    ]
+    if config['outputDir'] :
+      lualatexCmd.append('--output-directory={outputDir}')
+    if config['preamble']  :
+      lualatexCmd.append("\\\\input{{{preamble}}}")
+    lualatexCmd.append("\\\\input{{{texFilePath}}}")
+    if config['postamble'] :
+      lualatexCmd.append("\\\\input{{{postamble}}}")
+    lualatexCmd = assembleCmd(lualatexCmd, config)
+
+    # We need to re-run the command until the checkFilePath file stabilizes
+
+    if config['outputDir'] : 
+      checkFilePath = os.path.join(config['outputDir'], checkFilePath)
+
+    texFileTime      = os.path.getmtime(config['texFilePath'])
+
+    checkFileTime    = 0
+    oldCheckFileSize = 0
+    if os.path.exists(checkFilePath) :
+      checkFileTime    = os.path.getmtime(checkFilePath)
+      oldCheckFileSize = os.path.getsize(checkFilePath)
+
+    if texFileTime < checkFileTime :
+      print("All up to date!")
+      sys.exit(0)
+
+    for runNum in range(10) :
+      print("-----------------------------------------------------------------")
+      print(f"run: {runNum}")
+      print("cmd:")
+      print(lualatexCmd)
+      print("-----------------------------------------------------------------")
+      sys.stdout.flush()
+
+      if os.path.exists(checkFilePath) :
+        os.system(f"cp {checkFilePath} {checkFilePath}.old")
+
+      result = os.system(lualatexCmd)
+      if result != 0 :
+        print(f"ERROR: last run of the lualatex command returned: [{result}]")
+        sys.stdout.flush()
+
+      newCheckFileSize = os.path.getsize(checkFilePath)
+      print("")
+      if newCheckFileSize != oldCheckFileSize :
+        print(f"{checkFilePath} sizes differ: {oldCheckFileSize} != {newCheckFileSize}")
+        sys.stdout.flush()
+        oldCheckFileSize = newCheckFileSize
+      else :
+        print(f"{checkFilePath} sizes are the same")
+        sys.stdout.flush()
+        diffCmdStr = f"diff -q {checkFilePath} {checkFilePath}.old"
+        print(diffCmdStr)
+        sys.stdout.flush()
+        diffResult = os.system(diffCmdStr)
+        if diffResult == 0 : 
+          print("NO differences found.... all done!")
+          sys.stdout.flush()
+          sys.exit(0)
+     
+##############################################################################
+# list the known commands and how to run them...
+
+knownCommands = {
+  'metafun'  : runMetafun,
+  'lualatex' : runLuaLaTeX
+}
+
+if config['program'] not in knownCommands :
+  print(f"Sorry I don't understand the program: {config['program']}")
+  sys.exit(1)
+
+# RUN the command!
+knownCommands[config['program']](config)

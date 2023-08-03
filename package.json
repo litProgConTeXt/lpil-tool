@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/litProgConTeXt/lpil-tool.git"
+    "url": "git+https://github.com/litProgLaTeX/lpil-tool.git"
   },
   "keywords": [
     "Literate",
@@ -31,9 +31,9 @@
   "author": "Stephen Gaito",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/litProgConTeXt/lpil-tool/issues"
+    "url": "https://github.com/litProgLaTeX/lpil-tool/issues"
   },
-  "homepage": "https://github.com/litProgConTeXt/lpil-tool#readme",
+  "homepage": "https://github.com/litProgLaTeX/lpil-tool#readme",
   "devDependencies": {
     "@mxssfd/typedoc-theme": "^1.1.2",
     "@swc/cli": "^0.1.62",

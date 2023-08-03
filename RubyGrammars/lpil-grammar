@@ -14,9 +14,21 @@ lpilG = Grammar.new(
   ],
 )
 
-lpilG[:subfile] = Pattern.new(
-  match: oneOf([ /\\input/, /\\include/ ]),
-  tag_as: "keyword.control.subfile"
+lpilG[:ambles] = Pattern.new(
+  match: Pattern.new(/\%\s+\!LPiL\s+/)
+    .oneOf([ /preamble/, /postamble/])
+    .then(/\s+=\s+/)
+    .then(
+      match: /\S+/,
+      tag_as: "keyword.control.amble.path"
+    ).then(/\s/),
+  tag_as: "keyword.control.amble"
+)
+
+lpilG[:components] = Pattern.new(
+  match: oneOf([ /\\input/, /\\include/ ])
+    .then(GPatterns::SimpleArg),
+  tag_as: "keyword.control.structure"
 )
 
 lpilG[:newcodetype] = Pattern.new(
@@ -31,9 +43,9 @@ lpilG[:lpilcode] = PatternRange.new(
   tag_as: "source.lpilcode",
   start_pattern: Pattern.new(
     match:
-      Pattern.new(/\\begin\{lpil:/)
+      Pattern.new(/\\begin\{lpil\:/)
       .then(
-        match: /\w/,
+        match: /\w+/,
         tag_as: "keyword.control.source.type",
         reference: "codeType"
       )
@@ -44,9 +56,11 @@ lpilG[:lpilcode] = PatternRange.new(
   ),
   end_pattern: Pattern.new(
     match:
-      Pattern.new(/\\end\{lpil:/)
-      .matchResultOf("codeType")
-      .then(/\}/)
+      Pattern.new(/\\end\{lpil\:/)
+      .then(
+        match: matchResultOf("codeType"),
+        tag_as: "keyword.control.source.type"
+      ).then(/\}/)
       .then(/\W/),
     tag_as: "keyword.control.source.stop"
   )
@@ -93,7 +107,8 @@ lpilG[:lpilcreates] = Pattern.new(
 )
 
 lpilG[:$initial_context] = [
-  :subfile,
+  :ambles,
+  :components,
   :newcodetype,
   :lpilcode,
   :lpilbuild,
@@ -103,6 +118,6 @@ lpilG[:$initial_context] = [
 
 lpilG.save_to(
     syntax_name: "lpil",
-    syntax_dir: "../lpil/syntaxes",
-    tag_dir: "../lpil/syntaxes",
+    syntax_dir: "../src/syntaxes",
+    tag_dir: "../src/syntaxes",
 )

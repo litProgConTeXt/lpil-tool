@@ -12,7 +12,9 @@ const logger : ValidLogger = Logging.getLogger('lpil')
 class Components {
 
   pendingComponents : Set<string> = new Set()
-  loadedComponents : Set<string>  = new Set()
+  loadedComponents  : Set<string> = new Set()
+  preambleLoaded    : boolean     = false
+  postambleLoaded   : boolean     = false
 
   pending(aComponent : string) {
     this.pendingComponents.add(aComponent)
@@ -43,7 +45,48 @@ export function registerActions(
   structures.newStructure('components', new Components())
 
   scopeActions.addScopedAction(
-    'initialize.control.structure.context',
+    'keyword.control.amble.lpil',
+    import.meta.url,
+    async function(
+      thisScope : string,
+      theScope : string,
+      theTokens : string[],
+      theLine : number,
+      theDoc : any) {
+        logger.debug("----------------------------------------------------------")
+        logger.debug("loadPrePostAmble")
+        logger.trace(`thisScope: ${thisScope}`)
+        logger.trace(` theScope: ${theScope}`)
+        logger.debug(`theTokens: ${theTokens}`)
+        logger.trace(`  theLine: ${theLine}`)
+        logger.trace(`   theDoc: ${theDoc.docName}`)
+        logger.debug("----------------------------------------------------------")
+        const aDocPath = theTokens[1]
+        const components = <Components>structures.getStructure('components')
+        // ONLY load the first pre/post amble...
+        var loadFile = false
+        if (theTokens[0].includes('preamble') && !components.preambleLoaded) {
+          loadFile = true
+          components.preambleLoaded = true
+        }
+        if (theTokens[0].includes('postamble') && !components.postambleLoaded) {
+          loadFile = true
+          components.postambleLoaded = true
+        }
+        if (loadFile) {
+          logger.debug("==========================================================")
+          logger.debug(`Loading amble: ${theTokens[1]}`)
+          components.loaded(aDocPath)
+          await grammars.traceParseOf(aDocPath, config)
+          logger.debug(`Loaded amble: ${theTokens[1]}`)
+          logger.debug("==========================================================")
+          logger.debug("----------------------------------------------------------")
+        }
+      }
+  )
+
+  scopeActions.addScopedAction(
+    'initialize.control.structure.lpil',
     import.meta.url,
     async function(
       thisScope : string,
@@ -64,7 +107,7 @@ export function registerActions(
   )
 
   scopeActions.addScopedAction(
-    'run.load.components.context',
+    'run.load.components.lpil',
     import.meta.url,
     async function(
       thisScope :string,
@@ -97,7 +140,7 @@ export function registerActions(
   )
 
   scopeActions.addScopedAction(
-    'keyword.control.structure.context',
+    'keyword.control.structure.lpil',
     import.meta.url,
     async function(
       thisScope : string,
@@ -105,21 +148,27 @@ export function registerActions(
       theTokens : string[],
       theLine : number,
       theDoc : any) {
-      const components = <Components>structures.getStructure('components')
-      components.pending(theTokens[1]+'.tex')
-      logger.trace("----------------------------------------------------------")
-      logger.trace("loadComponent")
-      logger.trace(`thisScope: ${thisScope}`)
-      logger.trace(` theScope: ${theScope}`)
-      logger.trace(`theTokens: ${theTokens}`)
-      logger.trace(`  theLine: ${theLine}`)
-      logger.trace(`   theDoc: ${theDoc.docName}`)
-      logger.trace("----------------------------------------------------------")
-    }
+        logger.trace("----------------------------------------------------------")
+        logger.trace("loadComponent")
+        logger.trace(`thisScope: ${thisScope}`)
+        logger.trace(` theScope: ${theScope}`)
+        logger.trace(`theTokens: ${theTokens}`)
+        logger.trace(`  theLine: ${theLine}`)
+        logger.trace(`   theDoc: ${theDoc.docName}`)
+        logger.trace("----------------------------------------------------------")
+        const components = <Components>structures.getStructure('components')
+        var theFilePath = theTokens[1]
+        if (theFilePath.endsWith('.tex') || theFilePath.endsWith('.sty')) {
+          // don't do anything
+        } else {
+          theFilePath += '.tex'
+        }
+        components.pending(theFilePath)
+      }
   )
 
   scopeActions.addScopedAction(
-    'finalize.control.structure.context',
+    'finalize.control.structure.lpil',
     import.meta.url,
     async function(
       thisScope : string,

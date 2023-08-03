@@ -88,7 +88,7 @@ class BuildReqs {
     const theInfo = this._getBuildInfo(docName)
     if (theInfo) {
       if (!theInfo.curDesc) {
-        logger.trace(`WARNING: no start of the current artifact build description in ${docName}`)
+        logger.trace(`WARNING: no start of the current artifact build builddescription in ${docName}`)
         logger.trace(`  ... ignoring the artifact which ends at ${lineNumber}!`)
         return
       }
@@ -107,7 +107,7 @@ class BuildReqs {
     const theInfo = this._getBuildInfo(docName)
     if (theInfo) {
       if (!theInfo.curDesc) {
-        logger.trace(`WARNING: no start of the current artifact build description in ${docName}`)
+        logger.trace(`WARNING: no start of the current artifact build builddescription in ${docName}`)
         logger.trace(`  ... ignoring the requirement at ${lineNumber}!`)
         return
       }
@@ -124,7 +124,7 @@ class BuildReqs {
     const theInfo = this._getBuildInfo(docName)
     if (theInfo) {
       if (!theInfo.curDesc) {
-        logger.trace(`WARNING: no start of the current artifact build description in ${docName}`)
+        logger.trace(`WARNING: no start of the current artifact build builddescription in ${docName}`)
         logger.trace(`  ... ignoring the creation at ${lineNumber}!`)
         return
       }
@@ -162,7 +162,7 @@ class BuildReqs {
     logger.trace(`ENSURING the [${projDescDir}] directory exists`)
     await fsp.mkdir(projDescDir, { recursive: true })
     
-    // write out the project description YAML file...
+    // write out the project builddescription YAML file...
     logger.trace(`WRITING projDesc to [${projDescPath}]`)
     await fsp.writeFile(projDescPath, yaml.stringify({'projects' : projDesc }))
   }
@@ -231,8 +231,8 @@ export class DocCodeChunks {
 
     if (theCode) {
       if (!theCode.start) {
-        logger.trace(`WARNING: no start of ${codeType} in ${docName}`)
-        logger.trace(`  ... ignoring the chunk that ends at ${lineNumber}!`)
+        logger.warn(`WARNING: no start of ${codeType} in ${docName}`)
+        logger.warn(`  ... ignoring the chunk that ends at ${lineNumber}!`)
         delete theCode.start
         delete theCode.codeName
         return
@@ -242,8 +242,8 @@ export class DocCodeChunks {
       if (startLine && codeName) {
         const stopLine  = lineNumber
         if (stopLine <= startLine) {
-          logger.trace(`WARNING: no ${codeType} found between ${startLine} and ${stopLine} in ${docName}`)
-          logger.trace("  ... ignoring this chuck!")
+          logger.warn(`WARNING: no ${codeType} found between ${startLine} and ${stopLine} in ${docName}`)
+          logger.warn("  ... ignoring this chuck!")
           delete theCode.start
           delete theCode.codeName
           return
@@ -261,16 +261,36 @@ export class DocCodeChunks {
   }
       
   async finalize(config : BuildConfig) {
-    const srcDir = config.replaceTemplate(config.srcDir)
+    const srcDir   = config.replaceTemplate(config.srcDir)
     logger.trace(`ENSURING the [${srcDir}] directory exists`)
     await fsp.mkdir(srcDir, { recursive: true })
+    
+    const latexDir = config.replaceTemplate(config.latexDir)
+    logger.trace(`ENSURING the [${latexDir}] directory exists`)
+    await fsp.mkdir(latexDir, { recursive: true })
 
     for (const [ aDocName, someDocCode] of this.typedCodeChunks.entries()) {
       for (const [ aCodeType, someTypedCode] of someDocCode.namedCodeChunks.entries()) {
         for (const [ aCodeName, someNamedCode] of someTypedCode.codeChunks.entries()) {
           var theCode : string[] = []
-          const chunks = someNamedCode
+          const chunks   = someNamedCode
+          var   chunkNum = 1
           for (const aChunk of chunks) {
+            // write out this chunk...
+            const chunkNameArray : Array<string> = []
+            chunkNameArray.push(aCodeName)
+            chunkNameArray.push('.')
+            chunkNameArray.push(aDocName)
+            chunkNameArray.push('.c')
+            const chunkNumStr = "00000"+chunkNum
+            chunkNum += 1
+            chunkNameArray.push(chunkNumStr.substring(chunkNumStr.length-5))
+            chunkNameArray.push('.chunk')
+            const chunkPath = path.join(latexDir, chunkNameArray.join(''))
+            logger.debug(`WRITING this chunk to [${chunkPath}]`)
+            await fsp.writeFile(chunkPath, aChunk['theLines'].join('\n'))
+  
+            // append this chunk to the accumulated code
             theCode = theCode.concat(aChunk['theLines'])
           }
           // write out this source code...
@@ -280,6 +300,16 @@ export class DocCodeChunks {
         }
       }
     }    
+  }
+}
+
+export class CodeTypes {
+  codeTypes : Map<string, string> = new Map()
+
+  constructor() { }
+
+  addCodeType(aCodeType : string, someOptions : string) {
+    this.codeTypes.set(aCodeType, someOptions)
   }
 }
 
@@ -293,8 +323,37 @@ export function registerActions(
   logger        : ValidLogger
 ) {
 
-  structures.newStructure('code', new DocCodeChunks())
-  structures.newStructure('build', new BuildReqs())
+  structures.newStructure('codeTypes', new CodeTypes())
+  structures.newStructure('code',      new DocCodeChunks())
+  structures.newStructure('build',     new BuildReqs())
+
+  scopeActions.addScopedAction(
+    'keyword.control.newcodetype.lpil',
+    import.meta.url,
+    async function(
+      thisScope : string,
+      theScope  : string,
+      theTokens : string[],
+      theLine   : number,
+      theDoc    : Document | undefined
+    ) {
+      const codeType = theTokens[1]
+      const codeOptions = theTokens[3]
+      logger.debug("----------------------------------------------------------")
+      logger.debug("newCodeType")
+      logger.trace(`   thisScope: ${thisScope}`)
+      logger.trace(`    theScope: ${theScope}`)
+      logger.debug(`    codeType: ${codeType}`)
+      logger.debug(` codeOptions: ${codeOptions}`)
+      logger.debug(`   theTokens: ${theTokens}`)
+      logger.trace(`     theLine: ${theLine}`)
+      if (theDoc) logger.trace(`      theDoc: ${theDoc.docName}`)
+      logger.debug("----------------------------------------------------------")
+      const codeTypes = <CodeTypes>structures.getStructure('codeTypes')
+      if (theDoc) 
+        codeTypes.addCodeType(codeType, codeOptions)
+    }
+  )
 
   scopeActions.addScopedAction(
     'keyword.control.source.start.lpil',
@@ -308,16 +367,16 @@ export function registerActions(
     ) {
       const codeType = theTokens[1]
       const codeName = theTokens[3]
-      logger.trace("----------------------------------------------------------")
-      logger.trace("startCode")
+      logger.debug("----------------------------------------------------------")
+      logger.debug("startCode")
       logger.trace(`thisScope: ${thisScope}`)
       logger.trace(` theScope: ${theScope}`)
-      logger.trace(` codeType: ${codeType}`)
-      logger.trace(` codeName: ${codeName}`)
-      logger.trace(`theTokens: ${theTokens}`)
+      logger.debug(` codeType: ${codeType}`)
+      logger.debug(` codeName: ${codeName}`)
+      logger.debug(`theTokens: ${theTokens}`)
       logger.trace(`  theLine: ${theLine}`)
       if (theDoc) logger.trace(`   theDoc: ${theDoc.docName}`)
-      logger.trace("----------------------------------------------------------")
+      logger.debug("----------------------------------------------------------")
       const code = <DocCodeChunks>structures.getStructure('code')
       if (theDoc) 
         code.startCodeFor(theDoc.docName, codeType, codeName, theLine)
@@ -335,15 +394,15 @@ export function registerActions(
       theDoc    : Document | undefined
     ) {
       const codeType = theTokens[1]
-      logger.trace("----------------------------------------------------------")
-      logger.trace("stopCode")
+      logger.debug("----------------------------------------------------------")
+      logger.debug("stopCode")
       logger.trace(`thisScope: ${thisScope}`)
       logger.trace(` theScope: ${theScope}`)
-      logger.trace(` codeType: ${codeType}`)
-      logger.trace(`theTokens: ${theTokens}`)
+      logger.debug(` codeType: ${codeType}`)
+      logger.debug(`theTokens: ${theTokens}`)
       logger.trace(`  theLine: ${theLine}`)
       if (theDoc) logger.trace(`   theDoc: ${theDoc.docName}`)
-      logger.trace("----------------------------------------------------------") 
+      logger.debug("----------------------------------------------------------") 
       const code = <DocCodeChunks>structures.getStructure('code')
       if (theDoc) 
         code.stopCodeFor(theDoc.docName, codeType, theLine, theDoc.docLines)
@@ -374,7 +433,7 @@ export function registerActions(
   )
 
   scopeActions.addScopedAction(
-    'keyword.control.description.start.lpil',
+    'keyword.control.builddescription.start.lpil',
     import.meta.url,
     async function(
       thisScope : string,
@@ -384,7 +443,7 @@ export function registerActions(
       theDoc    : Document | undefined
     ) {
       logger.trace("----------------------------------------------------------")
-      logger.trace("description-start")
+      logger.trace("builddescription-start")
       logger.trace(`thisScope: ${thisScope}`)
       logger.trace(` theScope: ${theScope}`)
       logger.trace(`theTokens: ${theTokens}`)
@@ -400,7 +459,7 @@ export function registerActions(
   )
 
   scopeActions.addScopedAction(
-    'keyword.control.description.stop.lpil',
+    'keyword.control.builddescription.stop.lpil',
     import.meta.url,
     async function(
       thisScope : string,
@@ -410,7 +469,7 @@ export function registerActions(
       theDoc    : Document | undefined
     ) {
       logger.trace("----------------------------------------------------------")
-      logger.trace("description-stop")
+      logger.trace("builddescription-stop")
       logger.trace(`thisScope: ${thisScope}`)
       logger.trace(` theScope: ${theScope}`)
       logger.trace(`theTokens: ${theTokens}`)
@@ -479,7 +538,7 @@ export function registerActions(
   )
 
   scopeActions.addScopedAction(
-    'finalize.control.description',
+    'finalize.control.builddescription',
     import.meta.url,
     async function(
       thisScope : string,
