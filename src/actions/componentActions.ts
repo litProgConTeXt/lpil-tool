@@ -1,3 +1,5 @@
+import * as path from "path"
+
 import { BaseConfig as Config    } from "lpil-modules/dist/lib/configBase.js"
 import { Builders                } from "lpil-modules/dist/lib/builders.js"
 import { Document, DocumentCache } from "lpil-modules/dist/lib/documents.js"
@@ -52,37 +54,38 @@ export function registerActions(
       theScope : string,
       theTokens : string[],
       theLine : number,
-      theDoc : any) {
-        logger.debug("----------------------------------------------------------")
-        logger.debug("loadPrePostAmble")
-        logger.trace(`thisScope: ${thisScope}`)
-        logger.trace(` theScope: ${theScope}`)
-        logger.debug(`theTokens: ${theTokens}`)
-        logger.trace(`  theLine: ${theLine}`)
-        logger.trace(`   theDoc: ${theDoc.docName}`)
-        logger.debug("----------------------------------------------------------")
-        const aDocPath = theTokens[1]
-        const components = <Components>structures.getStructure('components')
-        // ONLY load the first pre/post amble...
-        var loadFile = false
-        if (theTokens[0].includes('preamble') && !components.preambleLoaded) {
-          loadFile = true
-          components.preambleLoaded = true
-        }
-        if (theTokens[0].includes('postamble') && !components.postambleLoaded) {
-          loadFile = true
-          components.postambleLoaded = true
-        }
-        if (loadFile) {
-          logger.debug("==========================================================")
-          logger.debug(`Loading amble: ${theTokens[1]}`)
-          components.loaded(aDocPath)
-          await grammars.traceParseOf(aDocPath, config)
-          logger.debug(`Loaded amble: ${theTokens[1]}`)
-          logger.debug("==========================================================")
-          logger.debug("----------------------------------------------------------")
-        }
+      theDoc : any
+    ) {
+      logger.debug("----------------------------------------------------------")
+      logger.debug("loadPrePostAmble")
+      logger.trace(`thisScope: ${thisScope}`)
+      logger.trace(` theScope: ${theScope}`)
+      logger.debug(`theTokens: ${theTokens}`)
+      logger.trace(`  theLine: ${theLine}`)
+      logger.trace(`   theDoc: ${theDoc.docName}`)
+      logger.debug("----------------------------------------------------------")
+      const aDocPath = theTokens[1]
+      const components = <Components>structures.getStructure('components')
+      // ONLY load the first pre/post amble...
+      var loadFile = false
+      if (theTokens[0].includes('preamble') && !components.preambleLoaded) {
+        loadFile = true
+        components.preambleLoaded = true
       }
+      if (theTokens[0].includes('postamble') && !components.postambleLoaded) {
+        loadFile = true
+        components.postambleLoaded = true
+      }
+      if (loadFile) {
+        logger.debug("==========================================================")
+        logger.debug(`Loading amble: ${theTokens[1]}`)
+        components.loaded(aDocPath)
+        await grammars.traceParseOf(aDocPath, config)
+        logger.debug(`Loaded amble: ${theTokens[1]}`)
+        logger.debug("==========================================================")
+        logger.debug("----------------------------------------------------------")
+      }
+    }
   )
 
   scopeActions.addScopedAction(
@@ -114,7 +117,8 @@ export function registerActions(
       theScope : string,
       theTokens : string[],
       theLine : number,
-      theDoc : any) {
+      theDoc : any
+    ) {
       logger.trace("----------------------------------------------------------")
       logger.trace("runComponent")
       logger.trace(`thisScope: ${thisScope}`)
@@ -124,9 +128,9 @@ export function registerActions(
       //logger.trace(`   theDoc: ${theDoc.docName}`)
       logger.trace("----------------------------------------------------------")
       const components = <Components>structures.getStructure('components')
-      for (const aDocPath of theTokens) {
-        components.pending(aDocPath)
-      }
+      const mainDocPath = theTokens[0]
+      components.pending(mainDocPath)
+      
       var someComponents = components.getPending()
       while (0 < someComponents.length) {
         logger.trace(someComponents)
@@ -147,24 +151,25 @@ export function registerActions(
       theScope : string,
       theTokens : string[],
       theLine : number,
-      theDoc : any) {
-        logger.trace("----------------------------------------------------------")
-        logger.trace("loadComponent")
-        logger.trace(`thisScope: ${thisScope}`)
-        logger.trace(` theScope: ${theScope}`)
-        logger.trace(`theTokens: ${theTokens}`)
-        logger.trace(`  theLine: ${theLine}`)
-        logger.trace(`   theDoc: ${theDoc.docName}`)
-        logger.trace("----------------------------------------------------------")
-        const components = <Components>structures.getStructure('components')
-        var theFilePath = theTokens[1]
-        if (theFilePath.endsWith('.tex') || theFilePath.endsWith('.sty')) {
-          // don't do anything
-        } else {
-          theFilePath += '.tex'
-        }
-        components.pending(theFilePath)
+      theDoc : any
+    ) {
+      logger.trace("----------------------------------------------------------")
+      logger.trace("loadComponent")
+      logger.trace(`thisScope: ${thisScope}`)
+      logger.trace(` theScope: ${theScope}`)
+      logger.trace(`theTokens: ${theTokens}`)
+      logger.trace(`  theLine: ${theLine}`)
+      logger.trace(`   theDoc: ${theDoc.docName}`)
+      logger.trace("----------------------------------------------------------")
+      const components = <Components>structures.getStructure('components')
+      var theFilePath = theTokens[1]
+      if (theFilePath.endsWith('.tex') || theFilePath.endsWith('.sty')) {
+        // don't do anything
+      } else {
+        theFilePath += '.tex'
       }
+      components.pending(theFilePath)
+    }
   )
 
   scopeActions.addScopedAction(
@@ -175,7 +180,8 @@ export function registerActions(
       theScope : string,
       theTokens : string[],
       theLine : number,
-      theDoc : any) {
+      theDoc : any
+    ) {
       logger.trace("----------------------------------------------------------")
       logger.trace("finalizeComponents")
       logger.trace(`thisScope: ${thisScope}`)

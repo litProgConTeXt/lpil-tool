@@ -4,6 +4,7 @@ keyword.control.builddescription.lpil
 keyword.control.builddescription.start.lpil
 keyword.control.builddescription.stop.lpil
 keyword.control.creates.lpil
+keyword.control.includediagram.lpil
 keyword.control.newcodetype.lpil
 keyword.control.requires.lpil
 keyword.control.simple.arg.lpil

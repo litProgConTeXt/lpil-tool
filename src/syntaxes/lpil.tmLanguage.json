@@ -23,6 +23,9 @@
       "include": "#lpilcode"
     },
     {
+      "include": "#includeDiagram"
+    },
+    {
       "include": "#lpilbuild"
     },
     {
@@ -50,6 +53,15 @@
         }
       },
       "name": "keyword.control.structure.lpil"
+    },
+    "includeDiagram": {
+      "match": "\\\\includeLpilDiagram[\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
+      "captures": {
+        "1": {
+          "name": "keyword.control.simple.arg.lpil"
+        }
+      },
+      "name": "keyword.control.includediagram.lpil"
     },
     "lpilbuild": {
       "begin": "\\\\begin\\{lpilBuild\\}[\\[\\(\\{](\\S+)[\\]\\)\\}][\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",

@@ -66,6 +66,13 @@ lpilG[:lpilcode] = PatternRange.new(
   )
 )
 
+lpilG[:includeDiagram] = Pattern.new(
+  match: Pattern.new(/\\includeLpilDiagram/)
+    .then(GPatterns::SimpleArg)
+    .then(/\W/),
+  tag_as: "keyword.control.includediagram"
+)
+
 lpilG[:lpilbuild] = PatternRange.new(
   start_pattern: Pattern.new(
     match: 
@@ -111,6 +118,7 @@ lpilG[:$initial_context] = [
   :components,
   :newcodetype,
   :lpilcode,
+  :includeDiagram,
   :lpilbuild,
   :lpilRequires,
   :lpilCreates,
