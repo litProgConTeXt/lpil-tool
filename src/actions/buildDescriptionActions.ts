@@ -164,9 +164,9 @@ class BuildReqs {
     const mainDocPath = bConfig.initialFile
     const docExt = path.extname(mainDocPath)
     const mainPDFPath = mainDocPath.replaceAll(docExt, '.pdf')
-    this.startBuildArtifact('baseDoc', mainDocPath, 'LaTeX')
+    this.startBuildArtifact('baseDoc', mainDocPath, 'typesetLatex')
     this.addBuildCreation('baseDoc', 'pdf', mainPDFPath, 0)
-    this.addBuildRequirement('baseDoc', 'LaTeX', mainDocPath, 0)
+    this.addBuildRequirement('baseDoc', 'latex', mainDocPath, 0)
   }
   
   async finalize(config : BuildConfig) {
@@ -346,7 +346,7 @@ export function registerActions(
       } else {
         theFilePath += '.tex'
       }
-      buildInfo.addBuildRequirement('baseDoc', 'LaTeX', theFilePath, theLine)
+      buildInfo.addBuildRequirement('baseDoc', 'latex', theFilePath, theLine)
     }
   )
 
@@ -403,7 +403,7 @@ export function registerActions(
       logger.debug("----------------------------------------------------------")
       if (theDoc) {
         const buildInfo = <BuildReqs>structures.getStructure('build')
-        buildInfo.addBuildRequirement('baseDoc', 'diagram', diagramName, theLine)
+        buildInfo.addBuildRequirement('baseDoc', 'diagrams', diagramName, theLine)
       }
     }
   )
