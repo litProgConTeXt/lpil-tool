@@ -86,6 +86,10 @@ class DocBuilder {
   artifacts : Array<BuildArtifact> = []
 }
 
+function removeLaTeXEscapes(aStr : string) : string {
+  return aStr.replaceAll(/\\(.)/g, "$1")
+}
+
 class BuildReqs {
 
   buildInfo : Map<string, DocBuilder> = new Map()
@@ -130,6 +134,9 @@ class BuildReqs {
     objName : string,
     lineNumber : number,
   ) {
+    objType = removeLaTeXEscapes(objType)
+    objName = removeLaTeXEscapes(objName)
+
     const theInfo = this._getBuildInfo(docName)
     if (theInfo) {
       if (!theInfo.curDesc) {
