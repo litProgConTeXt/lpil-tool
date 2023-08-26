@@ -113,6 +113,93 @@ lpilG[:lpilcreates] = Pattern.new(
   tag_as: "keyword.control.creates"
 )
 
+# label/ref/pageref (labels a structure (typically an environment))
+lpilG[:label] = Pattern.new(
+  match:
+    oneOf([/\\label/, /\\ref/, /\\pageref/])
+    .then(GPatterns::SimpleArg)
+    .then(/\W/),
+    tag_as: "keyword.control.label"
+  )
+  
+  # define/index (main definition vs a simple noted use)
+  lpilG[:defineIndex] = Pattern.new(
+    match: 
+    oneOf([/\\define/, /\\index/])
+    .then(GPatterns::SimpleArg)
+    .maybe(GPatterns::SimpleArg)
+    .then(/\W/),
+  tag_as: "keyword.control.defineIndex"
+)
+
+lpilG[:printIndex] = Pattern.new(
+  match: Pattern.new(/\\printindex/).then(/\W/),
+  tag_as: "keyword.control.printIndex"
+)
+
+# cite (a bib-reference)
+lpilG[:cite] = Pattern.new(
+  match: 
+    Pattern.new(/\\cite/)
+    .then(GPatterns::SimpleArg)
+    .maybe(GPatterns::SimpleArg)
+    .then(/\W/),
+  tag_as: "keyword.control.cite"
+)
+
+lpilG[:bibliography] = Pattern.new(
+  match: 
+    Pattern.new(/\\bibliography/)
+    .then(GPatterns::SimpleArg)
+    .then(/\W/),
+  tag_as: "keyword.control.bibliography"
+)
+
+# document structure
+lpilG[:abstract] = PatternRange.new(
+  tag_as: "source.latex.abstract.",
+  start_pattern: Pattern.new(
+    match: /\\begin\{abstract\}\W/,
+    tag_as: "keyword.control.abstract.start"
+  ),
+  end_pattern: Pattern.new(
+    match: /\\end\{abstract\}\W/,
+    tag_as: "keyword.control.abstract.stop"
+  )
+)
+
+lpilG[:sections] = Pattern.new(
+  match: Pattern.new(/\\lpil/)
+    .oneOf([
+      /Title/,
+      /Part/,
+      /Chapter/,
+      /Section/,
+      /SubSection/,
+      /SubSubSection/,
+      /Paragraph/,
+      /SubParagraph/
+    ])
+    .then(GPatterns::SimpleArg)
+    .then(GPatterns::SimpleArg)
+    .maybe(GPatterns::SimpleArg)
+    .then(/\W/),
+  tag_as: "keyword.control.sections"
+)
+
+lpilG[:matters] = Pattern.new(
+  match: oneOf([
+    /\\frontmatter/,
+    /\\maketitle/,
+    /\\mainmatter/,
+    /\\appendix/,
+    /\\backmatter/
+  ]),
+  tag_as: "keyword.control.matter"
+)
+
+# consider glossaries later....
+
 lpilG[:$initial_context] = [
   :ambles,
   :components,
@@ -122,6 +209,14 @@ lpilG[:$initial_context] = [
   :lpilbuild,
   :lpilRequires,
   :lpilCreates,
+  :label,
+  :defineIndex,
+  :printIndex,
+  :cite,
+  :bibliography,
+  :abstract,
+  :sections,
+  :matters
 ]
 
 lpilG.save_to(

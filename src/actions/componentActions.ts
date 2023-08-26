@@ -7,32 +7,12 @@ import { Grammars                } from "lpil-modules/dist/lib/grammars.js"
 import { ScopeActions            } from "lpil-modules/dist/lib/scopeActions.js"
 import { Structures              } from "lpil-modules/dist/lib/structures.js"
 
-import { Logging, ValidLogger  } from "lpil-modules/dist/lib/logging.js"
+import { Components              } from "./componentStructures.js"
+
+import { Logging, ValidLogger    } from "lpil-modules/dist/lib/logging.js"
 
 const logger : ValidLogger = Logging.getLogger('lpil')
 
-class Components {
-
-  pendingComponents : Set<string> = new Set()
-  loadedComponents  : Set<string> = new Set()
-  preambleLoaded    : boolean     = false
-  postambleLoaded   : boolean     = false
-
-  pending(aComponent : string) {
-    this.pendingComponents.add(aComponent)
-  }
-
-  getPending() {
-    return Array.from(this.pendingComponents.values())
-  }
-
-  loaded(aComponent : string) {
-    if (this.pendingComponents.has(aComponent)) {
-      this.pendingComponents.delete(aComponent)
-    }
-    this.loadedComponents.add(aComponent)
-  }
-}
 
 export function registerActions(
   config        : Config,

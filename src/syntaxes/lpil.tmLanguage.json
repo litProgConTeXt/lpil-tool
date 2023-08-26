@@ -33,11 +33,50 @@
     },
     {
       "include": "#lpilCreates"
+    },
+    {
+      "include": "#label"
+    },
+    {
+      "include": "#defineIndex"
+    },
+    {
+      "include": "#printIndex"
+    },
+    {
+      "include": "#cite"
+    },
+    {
+      "include": "#bibliography"
+    },
+    {
+      "include": "#abstract"
+    },
+    {
+      "include": "#sections"
+    },
+    {
+      "include": "#matters"
     }
   ],
   "repository": {
+    "abstract": {
+      "begin": "\\\\begin\\{abstract\\}\\W",
+      "end": "\\\\end\\{abstract\\}\\W",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.control.abstract.start.lpil"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "keyword.control.abstract.stop.lpil"
+        }
+      },
+      "name": "source.latex.abstract..lpil"
+    },
     "ambles": {
-      "match": "\\%\\s+\\!LPiL\\s+(?:(?:preamble)|(?:postamble))\\s+=\\s+(\\S+)\\s",
+      "match": "(?:\\%\\s+\\!LPiL\\s+)(?:(?:preamble)|(?:postamble))(?:\\s+=\\s+)(\\S+)\\s",
       "captures": {
         "1": {
           "name": "keyword.control.amble.path.lpil"
@@ -45,8 +84,29 @@
       },
       "name": "keyword.control.amble.lpil"
     },
+    "bibliography": {
+      "match": "(?:\\\\bibliography)(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])\\W",
+      "captures": {
+        "1": {
+          "name": "keyword.control.simple.arg.lpil"
+        }
+      },
+      "name": "keyword.control.bibliography.lpil"
+    },
+    "cite": {
+      "match": "(?:\\\\cite)(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])?)\\W",
+      "captures": {
+        "1": {
+          "name": "keyword.control.simple.arg.lpil"
+        },
+        "2": {
+          "name": "keyword.control.simple.arg.lpil"
+        }
+      },
+      "name": "keyword.control.cite.lpil"
+    },
     "components": {
-      "match": "(?:(?:\\\\input)|(?:\\\\include))[\\[\\(\\{](\\S+)[\\]\\)\\}]",
+      "match": "(?:(?:\\\\input)|(?:\\\\include))(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])",
       "captures": {
         "1": {
           "name": "keyword.control.simple.arg.lpil"
@@ -54,8 +114,20 @@
       },
       "name": "keyword.control.structure.lpil"
     },
+    "defineIndex": {
+      "match": "(?:(?:\\\\define)|(?:\\\\index))(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])?)\\W",
+      "captures": {
+        "1": {
+          "name": "keyword.control.simple.arg.lpil"
+        },
+        "2": {
+          "name": "keyword.control.simple.arg.lpil"
+        }
+      },
+      "name": "keyword.control.defineIndex.lpil"
+    },
     "includeDiagram": {
-      "match": "\\\\includeLpilDiagram[\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
+      "match": "(?:\\\\includeLpilDiagram)(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])\\W",
       "captures": {
         "1": {
           "name": "keyword.control.simple.arg.lpil"
@@ -63,8 +135,17 @@
       },
       "name": "keyword.control.includediagram.lpil"
     },
+    "label": {
+      "match": "(?:(?:\\\\label)|(?:\\\\ref)|(?:\\\\pageref))(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])\\W",
+      "captures": {
+        "1": {
+          "name": "keyword.control.simple.arg.lpil"
+        }
+      },
+      "name": "keyword.control.label.lpil"
+    },
     "lpilbuild": {
-      "begin": "\\\\begin\\{lpilBuild\\}[\\[\\(\\{](\\S+)[\\]\\)\\}][\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
+      "begin": "(?:\\\\begin\\{lpilBuild\\})(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])\\W",
       "end": "\\\\end\\{lpilBuild\\}\\W",
       "beginCaptures": {
         "0": {
@@ -97,8 +178,8 @@
       ]
     },
     "lpilcode": {
-      "begin": "\\\\begin\\{lpil\\:(\\w+)\\}[\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
-      "end": "\\\\end\\{lpil\\:((?:\\1))\\}\\W",
+      "begin": "(?:\\\\begin\\{lpil\\:)(\\w+)\\}(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])\\W",
+      "end": "(?:\\\\end\\{lpil\\:)((?:\\1))\\}\\W",
       "beginCaptures": {
         "0": {
           "name": "keyword.control.source.start.lpil"
@@ -121,7 +202,7 @@
       "name": "source.lpilcode.lpil"
     },
     "lpilcreates": {
-      "match": "\\\\lpilCreates[\\[\\(\\{](\\S+)[\\]\\)\\}][\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
+      "match": "(?:\\\\lpilCreates)(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])\\W",
       "captures": {
         "1": {
           "name": "keyword.control.simple.arg.lpil"
@@ -133,7 +214,7 @@
       "name": "keyword.control.creates.lpil"
     },
     "lpilrequires": {
-      "match": "\\\\lpilRequires[\\[\\(\\{](\\S+)[\\]\\)\\}][\\[\\(\\{](\\S+)[\\]\\)\\}]\\W",
+      "match": "(?:\\\\lpilRequires)(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])\\W",
       "captures": {
         "1": {
           "name": "keyword.control.simple.arg.lpil"
@@ -144,8 +225,12 @@
       },
       "name": "keyword.control.requires.lpil"
     },
+    "matters": {
+      "match": "(?:(?:\\\\frontmatter)|(?:\\\\maketitle)|(?:\\\\mainmatter)|(?:\\\\appendix)|(?:\\\\backmatter))",
+      "name": "keyword.control.matter.lpil"
+    },
     "newcodetype": {
-      "match": "\\\\newCodeType[\\[\\(\\{](\\S+)[\\]\\)\\}][\\[\\(\\{](\\S+)[\\]\\)\\}]",
+      "match": "(?:\\\\newCodeType)(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])",
       "captures": {
         "1": {
           "name": "keyword.control.simple.arg.lpil"
@@ -155,6 +240,25 @@
         }
       },
       "name": "keyword.control.newcodetype.lpil"
+    },
+    "printIndex": {
+      "match": "(?:\\\\printindex)\\W",
+      "name": "keyword.control.printIndex.lpil"
+    },
+    "sections": {
+      "match": "(?:\\\\lpil)(?:(?:Title)|(?:Part)|(?:Chapter)|(?:Section)|(?:SubSection)|(?:SubSubSection)|(?:Paragraph)|(?:SubParagraph))(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])(?:(?:[\\[\\(\\{]([^\\]\\)\\}]+)[\\]\\)\\}])?)\\W",
+      "captures": {
+        "1": {
+          "name": "keyword.control.simple.arg.lpil"
+        },
+        "2": {
+          "name": "keyword.control.simple.arg.lpil"
+        },
+        "3": {
+          "name": "keyword.control.simple.arg.lpil"
+        }
+      },
+      "name": "keyword.control.sections.lpil"
     }
   }
 }
