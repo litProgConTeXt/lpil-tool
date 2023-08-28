@@ -1,7 +1,6 @@
 import * as path from "path"
 
 import { BaseConfig as Config    } from "lpil-modules/dist/lib/configBase.js"
-import { Builders                } from "lpil-modules/dist/lib/builders.js"
 import { Document, DocumentCache } from "lpil-modules/dist/lib/documents.js"
 import { Grammars                } from "lpil-modules/dist/lib/grammars.js"
 import { ScopeActions            } from "lpil-modules/dist/lib/scopeActions.js"
@@ -16,7 +15,6 @@ const logger : ValidLogger = Logging.getLogger('lpil')
 
 export function registerActions(
   config        : Config,
-  builders      : Builders,
   documentCache : DocumentCache,
   grammars      : Grammars,
   scopeActions  : ScopeActions,
