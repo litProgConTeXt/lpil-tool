@@ -8,7 +8,7 @@ import { Structures              } from "lpil-modules/dist/lib/structures.js"
 
 import { Logging, ValidLogger    } from "lpil-modules/dist/lib/logging.js"
 
-import { DocCodeChunks           } from "../actions/codeActions.js"
+import { DocCodeChunks           } from "../actions/codeStructures.js"
 
 const logger : ValidLogger = Logging.getLogger('lpil')
 
