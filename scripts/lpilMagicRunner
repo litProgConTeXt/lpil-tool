@@ -11,20 +11,24 @@
 #    "stabilized" (this technique has been inspired by
 #    [texcaller](https://github.com/vog/texcaller)
 #    see: texcaller/c/texcaller.c
-#    and search for 'run command as often as necessary') 
+#    and search for 'run command as often as necessary')
 
+import datetime
+import json
 import os
+import shutil
 import sys
+#import yaml
 
 
 def usage() :
   print("""
   usage: lpilMagicRunner <<aTeXFile>> [<<outputDir>>]
-  
-  where: 
-  
+
+  where:
+
     aTeXFile is a (manditory) TeX/LaTeX/ConTeXt document to be typeset
-    
+
     outputDir is an (optional) directory in which to capture the outputs
 
   This script looks for TeX-Magic comments in the top of the file to be typeset
@@ -38,7 +42,7 @@ def usage() :
 
   The `program` magic comment specifies which "program" to use to typeset the
   given document. This "program" must be one which the `lpilMagicRunner` script
-  knows how to typeset. 
+  knows how to typeset.
 
   At the moment the `lpilMagicRunner` script understands the following
   "programs":
@@ -63,19 +67,24 @@ if -1 < sys.argv[1].find('-h') : usage()
 ##############################################################################
 # setup our configuration
 
+def getJobName(texFilePath) :
+  return os.path.basename(os.path.splitext(texFilePath)[0])
+
 # setup the various paths which define what/where and how to run...
 config = {}
 config['texFilePath']   = sys.argv[1]
 if not os.path.splitext(config['texFilePath'])[1] :
   config['texFilePath'] = config['texFilePath']+'.tex'
-config['jobName']       = os.path.basename(
-  os.path.splitext(config['texFilePath'])[0]
-)
+config['jobName']       = getJobName(config['texFilePath'])
 config['outputDir']     = None
-if 2 < len(sys.argv) : 
+if 2 < len(sys.argv) :
   config['outputDir']   = sys.argv[2]
-if not os.path.exists(config['outputDir']) : 
+if not os.path.exists(config['outputDir']) :
   os.makedirs(config['outputDir'], exist_ok=True)
+config['pdfFilePath']   = os.path.join(
+  config['outputDir'],
+  config['texFilePath'].replace('.tex', '.pdf')
+)
 config['curWorkingDir'] = os.getcwd()
 
 print(f"LPiLMagicRunner {config['texFilePath']} {config['outputDir']}")
@@ -104,29 +113,114 @@ with open(config['texFilePath']) as tf :
     if -1 < aLine.find('!tex') and -1 < aLine.find('program') :
       config['program'] = aLine.split('=')[1].strip()
 
+def reLoadDepsJson(config) :
+  if 'pygments' not in config : config['pygments'] = {}
+  if 'deps'     not in config : config['deps']     = {}
+  try :
+    depsJsonPath = os.path.join(config['outputDir'],f"{config['jobName']}.deps.json")
+    with open(depsJsonPath) as jFile :
+      depsStruc = json.loads(jFile.read())
+      if 'pygments' in depsStruc : config['pygments'] = depsStruc['pygments']
+      if 'deps'     in depsStruc : config['deps']     = depsStruc['deps']
+  except FileNotFoundError :
+    print(f"{config['jobName']}.deps.json file does not yet exist")
+  except Exception as err :
+    print(f"Could not load the [{depsJsonPath}] file")
+    print(repr(err))
+
+  # we MUST add this AFTER we try and load the deps.json file
+  if 'preamble' in config :
+    config['deps'][config['preamble']] = 'tex'
+
+  # add '.tex' to all dependent files which have NO extension
+  filesToChange = []
+  for aFile, aType in config['deps'].items() :
+    aBaseFile, anExt = os.path.splitext(aFile)
+    if not anExt : filesToChange.append(aFile)
+  for aFile in filesToChange :
+    oldFileType = config['deps'][aFile]
+    del config['deps'][aFile]
+    config['deps'][aFile+'.tex'] = oldFileType
+
+  # fake the 'plainText' code type
+  config['pygments']['plainText'] = 'TextLexer:linenos=1'
+
+  #print("-------------------------------------------------------------")
+  #print(yaml.dump(config))
+  #print("-------------------------------------------------------------")
+
+reLoadDepsJson(config)
+
 ##############################################################################
 # define how to run the known commands
 
 def assembleCmd(progArgs, config) :
   return " ".join(progArgs).format_map(config)
 
-def runMetafun(config) :
+#################################################################
+# RUN Pygmentize
+
+def runPygmentize(config, pygmentFilePath, codeType) :
+  if not os.path.exists(pygmentFilePath+'.out') :
+    print(f"Attempting to Pygmentitze [{pygmentFilePath}]")
+    print("  ... but could not find file!")
+    return
+
+  if codeType not in config['pygments'] :
+    print(f"Could not find codeType [{codeType}] using 'plainText'")
+    codeType = 'plainText'
+  pLexer, pOpts = config['pygments'][codeType].split(':')
+  pLexer = pLexer.removesuffix('Lexer').lower()
+  pygmentsCmd = [
+    'pygmentize',
+    '-f latex',
+    '-l {pLexer}',
+    '-o {pygmentFilePath}'
+  ]
+  if pOpts : pygmentsCmd.append('-O {pOpts}')
+  pygmentsCmd.append('{pygmentFilePath}.out')
+  pygmentsCmd = assembleCmd(pygmentsCmd, {
+    'pygmentFilePath' : pygmentFilePath,
+    'pOpts'           : pOpts,
+    'pLexer'          : pLexer
+  })
+
+  print("-----------------------------------------------------------------")
+  print("pygmentize cmd:")
+  print(pygmentsCmd)
+  print("-----------------------------------------------------------------")
+  sys.stdout.flush()
+  result = os.system(pygmentsCmd)
+  if result != 0 :
+    print(f"ERROR: the pygmentize command returned: [{result}]")
+    return(result)
+
+#################################################################
+# RUN MetaFun (ConTeXt)
+
+def runMetafun(config, texFilePath, codeType) :
+  texFilePath = texFilePath or config['texFilePath']
+  jobName     = getJobName(texFilePath)
+
+  oldDir = os.getcwd()
   if config['outputDir'] : os.chdir(config['outputDir'])
 
   dirSegs = []
   for aSegment in config['outputDir'].split(os.sep) :
     if 0 < len(aSegment) : dirSegs.append('..')
-  config['relTexFilePath'] = os.path.join(
-    *dirSegs, config['texFilePath']
-  )
-  
+  relTexFilePath = os.path.join( *dirSegs, texFilePath )
+
   # metafun (context + pdftops)
   metafunCmd = assembleCmd([
-      'context',
-      '--nonstopmode',
-      '--path={curWorkingDir}',
-      '{relTexFilePath}'
-    ], config)
+    'context',
+    '--nonstopmode',
+    '--path={curWorkingDir}',
+    '{relTexFilePath}'
+  ], {
+    'jobName'        : jobName,
+    'curWorkingDir'  : config['curWorkingDir'],
+    'relTexFilePath' : relTexFilePath
+  })
 
   print("-----------------------------------------------------------------")
   print(f"outputDir: {os.getcwd()}")
@@ -135,9 +229,10 @@ def runMetafun(config) :
   print("-----------------------------------------------------------------")
   sys.stdout.flush()
   result = os.system(metafunCmd)
-  if result != 0 : 
+  if result != 0 :
     print(f"ERROR: the metafun(context) command returned: [{result}]")
-    sys.exit(result)
+    os.chdir(oldDir)
+    return(result)
 
   # see: https://superuser.com/a/185404
   pdftopdfCmd = assembleCmd([
@@ -146,7 +241,7 @@ def runMetafun(config) :
       '-dCompatibilityLevel=1.5',
       '-o {jobName}_v1_5.pdf',
       '{jobName}.pdf'
-    ], config)
+    ], { 'jobName' : jobName })
 
   print("-----------------------------------------------------------------")
   print(f"outputDir: {os.getcwd()}")
@@ -155,15 +250,16 @@ def runMetafun(config) :
   print("-----------------------------------------------------------------")
   sys.stdout.flush()
   result = os.system(pdftopdfCmd)
-  if result != 0 : 
+  if result != 0 :
     print(f"ERROR: the pdf(1.7)->pdf(1.5) command returned: [{result}]")
-    sys.exit(result)
+    os.chdir(oldDir)
+    return(result)
 
   pdftopsCmd = assembleCmd([
       'pdftops',
       '-eps',
       '{jobName}.pdf'
-    ], config)
+    ], { 'jobName' : jobName })
 
   print("-----------------------------------------------------------------")
   print(f"outputDir: {os.getcwd()}")
@@ -172,17 +268,77 @@ def runMetafun(config) :
   print("-----------------------------------------------------------------")
   sys.stdout.flush()
   result = os.system(pdftopsCmd)
-  if result != 0 : 
+  if result != 0 :
     print(f"ERROR: the pdftops command returned: [{result}]")
-    sys.exit(result)
-  sys.exit(0)
+    os.chdir(oldDir)
+    return(result)
 
-def runLuaLaTeX(config) :
-    checkFilePath = config['jobName']+'.aux'
+  os.chdir(oldDir)
+
+#################################################################
+# RUN LuaLaTeX
+
+def upToDateWithPDF(checkFilePath, config) :
+  if 'pygmented' in checkFilePath :
+    # ignore files generated BY lualatex
+    return True
+  #print(f"checkFilePath: {checkFilePath}")
+
+  pdfFileTime      = 0
+  if os.path.exists(config['pdfFilePath']) :
+    pdfFileTime    = os.path.getmtime(config['pdfFilePath'])
+  #print(f"curWorkingDir: {os.getcwd()}")
+  #print(f"  pdfFileTime: {pdfFileTime}")
+  checkFileTime    = datetime.datetime.now().timestamp()
+  if os.path.exists(checkFilePath) :
+    checkFileTime    = os.path.getmtime(checkFilePath)
+
+  #print(f"checkFileTime: {checkFileTime}")
+
+  return checkFileTime <= pdfFileTime
+
+def fileChanged(checkFilePath, config) :
+  #print(f"Checking file [{checkFilePath}]")
+  if not os.path.exists(checkFilePath) :
+    #print(f"Checking file [{checkFilePath}]")
+    #print(f"  ... does not exist")
+    return True
+  newCheckFileSize = os.path.getsize(checkFilePath)
+  oldCheckFileSize = 0
+  oldCheckFilePath = checkFilePath+'.old'
+  if config['outputDir'] not in oldCheckFilePath :
+    oldCheckFilePath = os.path.join(
+      config['outputDir'], oldCheckFilePath
+    )
+  #print(f"     old file [{oldCheckFilePath}]")
+  if os.path.exists(oldCheckFilePath) :
+    oldCheckFileSize = os.path.getsize(oldCheckFilePath)
+  if newCheckFileSize != oldCheckFileSize :
+    #print(f"Checking file [{checkFilePath}]")
+    #print(f" sizes differ: {oldCheckFileSize} != {newCheckFileSize}")
+    sys.stdout.flush()
+    return True
+  #print("  sizes are the same")
+  sys.stdout.flush()
+  diffCmdStr = f"diff -q {checkFilePath} {oldCheckFilePath}"
+  #print(diffCmdStr)
+  sys.stdout.flush()
+  diffResult = os.system(diffCmdStr)
+  if diffResult == 0 :
+    #print("  contents are the same")
+    return False
+  #print(f"Checking file [{checkFilePath}]")
+  #print("  ... contents differ")
+  return True
+
+def runLuaLaTeX(config, jobName, codeType) :
+    jobName = jobName or config['jobName']
+    auxFilePath = os.path.join(config['outputDir'], jobName+'.aux')
 
     lualatexCmd = [
       'lualatex',
       '--synctex=1',
+      #'--recorder',
       '--interaction=nonstopmode',
       '--file-line-error',
       '--jobname={jobName}'
@@ -194,24 +350,27 @@ def runLuaLaTeX(config) :
     lualatexCmd.append("\\\\input{{{texFilePath}}}")
     if config['postamble'] :
       lualatexCmd.append("\\\\input{{{postamble}}}")
-    lualatexCmd = assembleCmd(lualatexCmd, config)
+    lualatexCmd = assembleCmd(lualatexCmd, {
+      'jobName'     : jobName,
+      'outputDir'   : config['outputDir'],
+      'preamble'    : config['preamble'],
+      'postamble'   : config['postamble'],
+      'texFilePath' : config['texFilePath']
+    })
 
-    # We need to re-run the command until the checkFilePath file stabilizes
+    # We need to re-run the command until the auxFilePath file stabilizes
 
-    if config['outputDir'] : 
-      checkFilePath = os.path.join(config['outputDir'], checkFilePath)
-
-    texFileTime      = os.path.getmtime(config['texFilePath'])
-
-    checkFileTime    = 0
-    oldCheckFileSize = 0
-    if os.path.exists(checkFilePath) :
-      checkFileTime    = os.path.getmtime(checkFilePath)
-      oldCheckFileSize = os.path.getsize(checkFilePath)
-
-    if texFileTime < checkFileTime :
+    changesFound = not upToDateWithPDF(auxFilePath, config)
+    if changesFound : print(f"Changes found in [{auxFilePath}]")
+    for aFile, aType in config['deps'].items() :
+      if not upToDateWithPDF(aFile, config) : 
+        print(f"Changes found in [{aFile}]")
+        if '_mp.tex' in aFile :
+          runMetafun(config, aFile, None)
+        changesFound = True
+    if not changesFound :
       print("All up to date!")
-      sys.exit(0)
+      return
 
     for runNum in range(10) :
       print("-----------------------------------------------------------------")
@@ -221,38 +380,72 @@ def runLuaLaTeX(config) :
       print("-----------------------------------------------------------------")
       sys.stdout.flush()
 
-      if os.path.exists(checkFilePath) :
-        os.system(f"cp {checkFilePath} {checkFilePath}.old")
+      # backup the dependent files to see if they change...
+      if os.path.exists(auxFilePath) :
+        shutil.copyfile(auxFilePath, auxFilePath+'.old')
+      for aFile, aType in config['deps'].items() :
+        if os.path.exists(aFile) :
+          if 'pygmented' in aFile : aFile = aFile+'.out'
+          oldFile = aFile+'.old'
+          if config['outputDir'] not in oldFile :
+            oldFile = os.path.join(config['outputDir'], oldFile)
+          shutil.copyfile(aFile, oldFile)
 
       result = os.system(lualatexCmd)
       if result != 0 :
         print(f"ERROR: last run of the lualatex command returned: [{result}]")
         sys.stdout.flush()
 
-      newCheckFileSize = os.path.getsize(checkFilePath)
-      print("")
-      if newCheckFileSize != oldCheckFileSize :
-        print(f"{checkFilePath} sizes differ: {oldCheckFileSize} != {newCheckFileSize}")
+      reLoadDepsJson(config)
+
+      #os.system(f"ls -la {config['outputDir']}")
+
+      print("-----------------------------------------------------------------")
+      filesToTypeset = []
+      changesFound = fileChanged(auxFilePath, config)
+      if changesFound : 
+        print(f"Changes found in [{auxFilePath}]")
+      for aFile, aType in config['deps'].items() :
+        origFile = aFile
+        if 'pygmented' in aFile : aFile = aFile+'.out'
+        if fileChanged(aFile, config) :
+          print(f"Changes found in [{aFile}]")
+          changesFound = True
+          if aType != 'tex' : filesToTypeset.append(origFile)
+
+      if changesFound :
+        print("DIFFERENCES found....")
         sys.stdout.flush()
-        oldCheckFileSize = newCheckFileSize
-      else :
-        print(f"{checkFilePath} sizes are the same")
-        sys.stdout.flush()
-        diffCmdStr = f"diff -q {checkFilePath} {checkFilePath}.old"
-        print(diffCmdStr)
-        sys.stdout.flush()
-        diffResult = os.system(diffCmdStr)
-        if diffResult == 0 : 
-          print("NO differences found.... all done!")
+        if filesToTypeset :
+          print("  need to re-typeset dependent files")
           sys.stdout.flush()
-          sys.exit(0)
-     
+          for aFile in filesToTypeset :
+            print(f"    typesetting [{aFile}]({config['deps'][aFile]})")
+            sys.stdout.flush()
+            taskType = config['deps'][aFile]
+            taskOpts = None
+            if '-' in taskType :
+              taskParts = taskType.split('-')
+              taskType  = taskParts[0]
+              taskOpts  = taskParts[1]
+            taskType = taskType.lower()
+            if taskType in knownCommands :
+              result = knownCommands[taskType](config, aFile, taskOpts)
+            else :
+              print(f"TaskType [{taskType}] not known!")
+      else :
+        print("NO differences found.... all done!")
+        sys.stdout.flush()
+        return
+
+
 ##############################################################################
 # list the known commands and how to run them...
 
 knownCommands = {
   'metafun'  : runMetafun,
-  'lualatex' : runLuaLaTeX
+  'lualatex' : runLuaLaTeX,
+  'pygments' : runPygmentize
 }
 
 if config['program'] not in knownCommands :
@@ -260,4 +453,6 @@ if config['program'] not in knownCommands :
   sys.exit(1)
 
 # RUN the command!
-knownCommands[config['program']](config)
+result = knownCommands[config['program']](config, None, None)
+if result : sys.exit(result)
+sys.exit(0)
