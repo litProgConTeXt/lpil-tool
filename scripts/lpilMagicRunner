@@ -212,12 +212,19 @@ def runMetafun(config, texFilePath, codeType) :
   jobName     = getJobName(texFilePath)
 
   oldDir = os.getcwd()
-  if config['outputDir'] : os.chdir(config['outputDir'])
-
-  dirSegs = []
-  for aSegment in config['outputDir'].split(os.sep) :
-    if 0 < len(aSegment) : dirSegs.append('..')
-  relTexFilePath = os.path.join( *dirSegs, texFilePath )
+  relTexFilePath = texFilePath
+  if config['outputDir'] : 
+    outputDir = config['outputDir']
+    if os.sep in texFilePath :
+      outputDir = os.path.join(
+        outputDir, os.path.dirname(texFilePath)
+      )
+      #texFilePath = os.path.basename(texFilePath)
+      dirSegs = []
+      for aSegment in outputDir.split(os.sep) :
+        if 0 < len(aSegment) : dirSegs.append('..')
+      relTexFilePath = os.path.join( *dirSegs, texFilePath )
+    os.chdir(outputDir)
 
   # metafun (context + pdftops)
   metafunCmd = assembleCmd([
@@ -398,6 +405,7 @@ def runLuaLaTeX(config, jobName, codeType) :
           oldFile = aFile+'.old'
           if config['outputDir'] not in oldFile :
             oldFile = os.path.join(config['outputDir'], oldFile)
+            os.makedirs(os.path.dirname(oldFile), exist_ok=True)
           shutil.copyfile(aFile, oldFile)
 
       result = os.system(lualatexCmd)
