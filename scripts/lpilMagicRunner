@@ -18,7 +18,7 @@ import json
 import os
 import shutil
 import sys
-import yaml
+#import yaml
 
 def usage() :
   print("""
@@ -115,9 +115,9 @@ with open(config['texFilePath']) as tf :
     if -1 < aKey.find('!tex') and -1 < aKey.find('program') :
       config['program'] = aValue
 
-print("-------------------------------------------------------------")
-print(yaml.dump(config))
-print("-------------------------------------------------------------")
+#print("-------------------------------------------------------------")
+#print(yaml.dump(config))
+#print("-------------------------------------------------------------")
 
 def reLoadDepsJson(config) :
   if 'pygments' not in config : config['pygments'] = {}
@@ -135,13 +135,15 @@ def reLoadDepsJson(config) :
     print(repr(err))
 
   # we MUST add this AFTER we try and load the deps.json file
-  if 'preamble' in config and config['preamble'] :
+  if config['preamble'] :
     config['deps'][config['preamble']] = 'tex'
+  if config['postamble'] :
+    config['deps'][config['postamble']] = 'tex'
 
   # add '.tex' to all dependent files which have NO extension
   filesToChange = []
   for aFile, aType in config['deps'].items() :
-    print(f"checking {aFile} with type {aType}")
+    #print(f"checking {aFile} with type {aType}")
     aBaseFile, anExt = os.path.splitext(aFile)
     if not anExt : filesToChange.append(aFile)
   for aFile in filesToChange :
@@ -149,7 +151,7 @@ def reLoadDepsJson(config) :
     del config['deps'][aFile]
     config['deps'][aFile+'.tex'] = oldFileType
 
-  # fake the 'plainText' code type
+  # add the 'plainText' code type
   config['pygments']['plainText'] = 'TextLexer:linenos=1'
 
   #print("-------------------------------------------------------------")
@@ -352,7 +354,7 @@ def runLuaLaTeX(config, jobName, codeType) :
     ]
     if config['outputDir'] :
       lualatexCmd.append('--output-directory={outputDir}')
-    if config['preamble']  :
+    if config['preamble'] :
       lualatexCmd.append("\\\\input{{{preamble}}}")
     lualatexCmd.append("\\\\input{{{texFilePath}}}")
     if config['postamble'] :
