@@ -357,114 +357,114 @@ def fileChanged(checkFilePath, config) :
   return True
 
 def runLuaLaTeX(config, jobName, codeType) :
-    if not jobName :
-      print("running LuaLaTeX from the command line")
-    jobName = jobName or config['jobName']
-    auxFilePath = os.path.join(config['outputDir'], jobName+'.aux')
+  if not jobName :
+    print("running LuaLaTeX from the command line")
+  jobName = jobName or config['jobName']
+  auxFilePath = os.path.join(config['outputDir'], jobName+'.aux')
 
-    lualatexCmd = [
-      'lualatex',
-      '--synctex=1',
-      #'--recorder',
-      '--interaction=nonstopmode',
-      '--file-line-error',
-      '--jobname={jobName}'
-    ]
-    if config['outputDir'] :
-      lualatexCmd.append('--output-directory={outputDir}')
-    if config['preamble'] :
-      lualatexCmd.append("\\\\input{{{preamble}}}")
-    lualatexCmd.append("\\\\input{{{texFilePath}}}")
-    if config['postamble'] :
-      lualatexCmd.append("\\\\input{{{postamble}}}")
-    lualatexCmd = assembleCmd(lualatexCmd, {
-      'jobName'     : jobName,
-      'outputDir'   : config['outputDir'],
-      'preamble'    : config['preamble'],
-      'postamble'   : config['postamble'],
-      'texFilePath' : config['texFilePath']
-    })
+  lualatexCmd = [
+    'lualatex',
+    '--synctex=1',
+    #'--recorder',
+    '--interaction=nonstopmode',
+    '--file-line-error',
+    '--jobname={jobName}'
+  ]
+  if config['outputDir'] :
+    lualatexCmd.append('--output-directory={outputDir}')
+  if config['preamble'] :
+    lualatexCmd.append("\\\\input{{{preamble}}}")
+  lualatexCmd.append("\\\\input{{{texFilePath}}}")
+  if config['postamble'] :
+    lualatexCmd.append("\\\\input{{{postamble}}}")
+  lualatexCmd = assembleCmd(lualatexCmd, {
+    'jobName'     : jobName,
+    'outputDir'   : config['outputDir'],
+    'preamble'    : config['preamble'],
+    'postamble'   : config['postamble'],
+    'texFilePath' : config['texFilePath']
+  })
 
-    # We need to re-run the command until the auxFilePath file stabilizes
+  # We need to re-run the command until the auxFilePath file stabilizes
 
-    changesFound = not upToDateWithPDF(auxFilePath, config)
-    if changesFound : print(f"Changes found in [{auxFilePath}]")
+  changesFound = not upToDateWithPDF(auxFilePath, config)
+  if changesFound : print(f"Changes found in [{auxFilePath}]")
+  for aFile, aType in config['deps'].items() :
+    if not upToDateWithPDF(aFile, config) :
+      print(f"Changes found in [{aFile}]")
+      if '_mp.tex' in aFile :
+        runMetafun(config, aFile, None)
+      changesFound = True
+  if not changesFound :
+    print("All up to date!")
+    return
+
+  for runNum in range(10) :
+    print("-----------------------------------------------------------------")
+    print(f"run: {runNum}")
+    print("cmd:")
+    print(lualatexCmd)
+    print("-----------------------------------------------------------------")
+    sys.stdout.flush()
+
+    # backup the dependent files to see if they change...
+    if os.path.exists(auxFilePath) :
+      shutil.copyfile(auxFilePath, auxFilePath+'.old')
     for aFile, aType in config['deps'].items() :
-      if not upToDateWithPDF(aFile, config) :
-        print(f"Changes found in [{aFile}]")
-        if '_mp.tex' in aFile :
-          runMetafun(config, aFile, None)
-        changesFound = True
-    if not changesFound :
-      print("All up to date!")
-      return
+      if os.path.exists(aFile) :
+        if 'pygmented' in aFile : aFile = aFile+'.out'
+        oldFile = aFile+'.old'
+        if config['outputDir'] not in oldFile :
+          oldFile = os.path.join(config['outputDir'], oldFile)
+          os.makedirs(os.path.dirname(oldFile), exist_ok=True)
+        shutil.copyfile(aFile, oldFile)
 
-    for runNum in range(10) :
-      print("-----------------------------------------------------------------")
-      print(f"run: {runNum}")
-      print("cmd:")
-      print(lualatexCmd)
-      print("-----------------------------------------------------------------")
+    result = os.system(lualatexCmd)
+    if result != 0 :
+      print(f"ERROR: last run of the lualatex command returned: [{result}]")
       sys.stdout.flush()
 
-      # backup the dependent files to see if they change...
-      if os.path.exists(auxFilePath) :
-        shutil.copyfile(auxFilePath, auxFilePath+'.old')
-      for aFile, aType in config['deps'].items() :
-        if os.path.exists(aFile) :
-          if 'pygmented' in aFile : aFile = aFile+'.out'
-          oldFile = aFile+'.old'
-          if config['outputDir'] not in oldFile :
-            oldFile = os.path.join(config['outputDir'], oldFile)
-            os.makedirs(os.path.dirname(oldFile), exist_ok=True)
-          shutil.copyfile(aFile, oldFile)
+    reLoadDepsJson(config)
 
-      result = os.system(lualatexCmd)
-      if result != 0 :
-        print(f"ERROR: last run of the lualatex command returned: [{result}]")
+    #os.system(f"ls -la {config['outputDir']}")
+
+    print("-----------------------------------------------------------------")
+    filesToTypeset = []
+    changesFound = fileChanged(auxFilePath, config)
+    if changesFound :
+      print(f"Changes found in [{auxFilePath}]")
+    for aFile, aType in config['deps'].items() :
+      origFile = aFile
+      if 'pygmented' in aFile : aFile = aFile+'.out'
+      if fileChanged(aFile, config) :
+        print(f"Changes found in [{aFile}]")
+        changesFound = True
+        if aType != 'tex' : filesToTypeset.append(origFile)
+
+    if changesFound :
+      print("DIFFERENCES found....")
+      sys.stdout.flush()
+      if filesToTypeset :
+        print("  need to re-typeset dependent files")
         sys.stdout.flush()
-
-      reLoadDepsJson(config)
-
-      #os.system(f"ls -la {config['outputDir']}")
-
-      print("-----------------------------------------------------------------")
-      filesToTypeset = []
-      changesFound = fileChanged(auxFilePath, config)
-      if changesFound :
-        print(f"Changes found in [{auxFilePath}]")
-      for aFile, aType in config['deps'].items() :
-        origFile = aFile
-        if 'pygmented' in aFile : aFile = aFile+'.out'
-        if fileChanged(aFile, config) :
-          print(f"Changes found in [{aFile}]")
-          changesFound = True
-          if aType != 'tex' : filesToTypeset.append(origFile)
-
-      if changesFound :
-        print("DIFFERENCES found....")
-        sys.stdout.flush()
-        if filesToTypeset :
-          print("  need to re-typeset dependent files")
+        for aFile in filesToTypeset :
+          print(f"    typesetting [{aFile}]({config['deps'][aFile]})")
           sys.stdout.flush()
-          for aFile in filesToTypeset :
-            print(f"    typesetting [{aFile}]({config['deps'][aFile]})")
-            sys.stdout.flush()
-            taskType = config['deps'][aFile]
-            taskOpts = None
-            if '-' in taskType :
-              taskParts = taskType.split('-')
-              taskType  = taskParts[0]
-              taskOpts  = taskParts[1]
-            taskType = taskType.lower()
-            if taskType in knownCommands :
-              result = knownCommands[taskType](config, aFile, taskOpts)
-            else :
-              print(f"TaskType [{taskType}] not known!")
-      else :
-        print("NO differences found.... all done!")
-        sys.stdout.flush()
-        return
+          taskType = config['deps'][aFile]
+          taskOpts = None
+          if '-' in taskType :
+            taskParts = taskType.split('-')
+            taskType  = taskParts[0]
+            taskOpts  = taskParts[1]
+          taskType = taskType.lower()
+          if taskType in knownCommands :
+            result = knownCommands[taskType](config, aFile, taskOpts)
+          else :
+            print(f"TaskType [{taskType}] not known!")
+    else :
+      print("NO differences found.... all done!")
+      sys.stdout.flush()
+      return
 
 
 ##############################################################################
