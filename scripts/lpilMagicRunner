@@ -71,7 +71,11 @@ def getJobName(texFilePath) :
 
 # setup the various paths which define what/where and how to run...
 config = {}
-config['texFilePath']   = sys.argv[1]
+config['curWorkingDir'] = os.getcwd()
+config['texFilePath']   = sys.argv[1].removeprefix(
+  config['curWorkingDir']+os.sep
+)
+
 if not os.path.splitext(config['texFilePath'])[1] :
   config['texFilePath'] = config['texFilePath']+'.tex'
 config['jobName']       = getJobName(config['texFilePath'])
@@ -84,9 +88,9 @@ config['pdfFilePath']   = os.path.join(
   config['outputDir'],
   config['texFilePath'].replace('.tex', '.pdf')
 )
-config['curWorkingDir'] = os.getcwd()
 
 print(f"LPiLMagicRunner {config['texFilePath']} {config['outputDir']}")
+print(f"Current Working Dir: [{config['curWorkingDir']}]")
 
 # set the default program, preamble and postambles
 config['program']       = "lualatex"
@@ -208,22 +212,27 @@ def runPygmentize(config, pygmentFilePath, codeType) :
 # RUN MetaFun (ConTeXt)
 
 def runMetafun(config, texFilePath, codeType) :
+  if not texFilePath :
+    print("Running MetaFun from the command line")
   texFilePath = texFilePath or config['texFilePath']
   jobName     = getJobName(texFilePath)
 
   oldDir = os.getcwd()
+  print(f"oldDir: [{oldDir}]")
   relTexFilePath = texFilePath
-  if config['outputDir'] : 
+  print(f"relTexFilePath: [{relTexFilePath}]")
+  if config['outputDir'] :
     outputDir = config['outputDir']
+    print(f"outputDir: [{outputDir}]")
     if os.sep in texFilePath :
       outputDir = os.path.join(
         outputDir, os.path.dirname(texFilePath)
       )
-      #texFilePath = os.path.basename(texFilePath)
-      dirSegs = []
-      for aSegment in outputDir.split(os.sep) :
-        if 0 < len(aSegment) : dirSegs.append('..')
-      relTexFilePath = os.path.join( *dirSegs, texFilePath )
+      print(f"outputDir: [{outputDir}]")
+    dirSegs = []
+    for aSegment in outputDir.split(os.sep) :
+      if 0 < len(aSegment) : dirSegs.append('..')
+    relTexFilePath = os.path.join( *dirSegs, texFilePath )
     os.chdir(outputDir)
 
   # metafun (context + pdftops)
@@ -348,6 +357,8 @@ def fileChanged(checkFilePath, config) :
   return True
 
 def runLuaLaTeX(config, jobName, codeType) :
+    if not jobName :
+      print("running LuaLaTeX from the command line")
     jobName = jobName or config['jobName']
     auxFilePath = os.path.join(config['outputDir'], jobName+'.aux')
 
