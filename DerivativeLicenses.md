@@ -9,6 +9,11 @@ For example the MetaFunLexer (defined in `./scripts/Lexers.py`) has been
 *subclassed* from the Pygments source and extended with a number of the
 more heavily used MetaPost/MetaFun keywords.
 
+We have also extracted the `RegexLexer`'s `get_tokens_unprocessed` function to
+allow us to write our own `tracing_get_tokens_unprocessed` so we can trace the
+"normal" `RegexLexer`'s token processing (in order to help us write our own
+Lexer subclassed from `RegexLexer`)
+
 This Pygments code has been used under a BSD License.
 
 -------

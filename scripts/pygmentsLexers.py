@@ -1,4 +1,6 @@
-from pygments.lexer import TexLexer
+from pygments.token import Name, Keyword
+from pygments.lexer import RegexLexer, inherit, words
+from pygments.lexers.markup import TexLexer
 from pygments.token import *
 
 class MetaFunLexer(TexLexer) :
@@ -10,6 +12,7 @@ class MetaFunLexer(TexLexer) :
 
   tokens = {
     'root' : [
+      (words(('draw', 'drawarrow'), suffix=r'\b'), Keyword),
       inherit,
     ]
   }

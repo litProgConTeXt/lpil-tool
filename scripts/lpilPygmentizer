@@ -1,0 +1,209 @@
+#!/usr/bin/env python
+
+import os
+import re
+import sys
+import yaml
+
+from pygments import highlight
+from pygments.formatters import LatexFormatter
+from pygments.lexer import RegexLexer, bygroups, using, inherit, words
+from pygments.lexers import PythonLexer
+from pygments.lexers.markup import TexLexer
+from pygments.token import Name, Keyword, _TokenType
+#from pygments.token import *
+
+#from ./pygmentsLexers import MetaFunLexer
+
+def usage() :
+  print("""
+  usage: lpilPygmentizer [-h,--help] <lexerName> <inputFile>
+
+  where:
+
+    lexerName    is the name of a builtin Pygments Lexer 
+                 OR one of:
+
+                   MetaFunLexer
+              
+    inputFile   is the path to a file to be pygmentized
+  
+  options:
+    -h, --help   This help text
+
+  """)
+  exit(1)
+
+if len(sys.argv) < 3 : usage()
+if -1 < sys.argv[1].find('-h') : usage()
+
+lexerName = sys.argv[1]
+inputPath = sys.argv[2]
+
+print( "lpilPygmentizer")
+print(f"  on: {inputPath}")
+print(f"  using: {lexerName}")
+
+testStr = """
+fill fullcircle xyscaled (8cm,1cm) withcolor "darkred" ;
+draw textext("\bf This is text A") withcolor "white" ;
+"""
+testRE  = re.compile(r'(draw(?:(?:arrow)?))\b')
+#result = testRE.search(testStr, )
+#print(yaml.dump(result))
+#sys.exit(0)
+
+def tracing_get_tokens_unprocessed(self, text, stack=('root',)):
+  """
+  Split ``text`` into (tokentype, text) pairs.
+
+  ``stack`` is the initial stack (default: ``['root']``)
+  """
+  pos = 0
+  tokendefs = self._tokens
+  statestack = list(stack)
+  statetokens = tokendefs[statestack[-1]]
+  while 1:
+    for rexmatch, action, new_state in statetokens:
+      print(f"state: {statestack[-1]}")
+      if type(action) is _TokenType : print(action)
+      print(yaml.dump(rexmatch))
+      m = rexmatch(text, pos)
+      if m:
+        if action is not None:
+          if type(action) is _TokenType:
+            yield pos, action, m.group()
+          else:
+            yield from action(self, m)
+        pos = m.end()
+        if new_state is not None:
+          # state transition
+          if isinstance(new_state, tuple):
+            for state in new_state:
+              if state == '#pop':
+                if len(statestack) > 1:
+                  statestack.pop()
+                elif state == '#push':
+                  statestack.append(statestack[-1])
+                else:
+                  statestack.append(state)
+          elif isinstance(new_state, int):
+            # pop, but keep at least one state on the stack
+            # (random code leading to unexpected pops should
+            # not allow exceptions)
+            if abs(new_state) >= len(statestack):
+              del statestack[1:]
+            else:
+              del statestack[new_state:]
+          elif new_state == '#push':
+            statestack.append(statestack[-1])
+          else:
+            assert False, "wrong state def: %r" % new_state
+          statetokens = tokendefs[statestack[-1]]
+        break
+    else:
+      # We are here only if all state tokens have been considered
+      # and there was not a match on any of them.
+      try:
+        if text[pos] == '\n':
+          # at EOL, reset state to "root"
+          statestack = ['root']
+          statetokens = tokendefs['root']
+          yield pos, Whitespace, '\n'
+          pos += 1
+          continue
+        yield pos, Error, text[pos]
+        pos += 1
+      except IndexError:
+        break
+
+class MetaFunLexer(RegexLexer) :
+  """
+  Lexer for the MetaPost/MetaFun diagram typesetting langauge.
+  """
+
+  name = 'MetaFun'
+
+  def get_tokens_unprocessed(self, text, stack=('root',)) :
+    print("Hello from MetaFunLexer")
+    print(text)
+    for aTuple in tracing_get_tokens_unprocessed(self, text, stack) :
+      yield aTuple
+
+  tokens = {
+    'root' : [
+
+    ]
+  }
+
+class TexMetaFunLexer(TexLexer) :
+  """
+  Lexer for TeX which understands embedded \startMPxxxx \stopMPxxxx
+  MetaPost/MetaFun enivronments.
+  """
+  name = "TexMetaFun"
+
+  """
+    \startMPcalculation \stopMPcalculation
+    \startMPclip \stopMPclip
+    \startMPcode  \stopMPcode
+    \startMPdefinitions \stopMPdefinitions
+    \startMPdrawing  \stopMPdrawing
+    \startMPextensions \stopMPextensions
+    \startMPinitializations \stopMPinitializations
+    \startMPpage  \stopMPpage
+    \startMPpositiongraphic \stopMPpositiongraphic
+    \startMPrun \stopMPruns
+    \startuseMPgraphic \stopuseMPgrapic
+
+    metaPostEnvironments = [
+      'calculation', 'clip', 'code',
+      'definitions', 'drawing',
+      'extensions',  'initializations',
+      'page', 'positiongraphic', 'run'
+    ]
+  """
+
+  def get_tokens_unprocessed(self, text, stack=('root',)) :
+    print("Hello from TexMetaFun")
+    print(text)
+    for aTuple in tracing_get_tokens_unprocessed(self, text, stack) :
+      yield aTuple
+
+  tokens = {
+    'root' : [
+      (r'(\\startMP\S+)', Keyword, 'metaPostContent'),
+      inherit,
+    ],
+    'metaPostContent': [
+      (
+        r'(.+?)(\\stopMP\S+)',
+        bygroups(using(MetaFunLexer), Keyword)
+      )
+    ]
+  }
+
+theLexer = TexMetaFunLexer()
+#print(yaml.dump(theLexer._tokens))
+
+with open(inputPath) as inFile :
+  inputStr = inFile.read()
+
+print(inputStr)
+
+for (pos, action, aMatch) in theLexer.get_tokens_unprocessed(inputStr) :
+  print("------------------------------")
+  print(f"   pos: {pos}")
+  print(f"action: {action}")
+  print(f" match: {aMatch}")
+  #print(f"  tokens: {', '.join(someTokens)}")
+  #print(f"someText: {someText}")
+
+"""
+code = 'print "Hello World"'
+print(code)
+print("---------------------------------------------------")
+print(highlight(code, PythonLexer(), LatexFormatter()))
+print("---------------------------------------------------")
+
+"""

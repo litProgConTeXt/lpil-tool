@@ -20,9 +20,12 @@ import shutil
 import sys
 #import yaml
 
+#maxLuaTexRuns = 1
+maxLuaTexRuns = 10
+
 def usage() :
   print("""
-  usage: lpilMagicRunner <<aTeXFile>> [<<outputDir>>]
+  usage: lpilMagicRunner [-h,--help] <<aTeXFile>> [<<outputDir>>]
 
   where:
 
@@ -56,6 +59,9 @@ def usage() :
   the LPiL Magic Runner to fabricate complete LaTeX documents out of component
   parts. This allows small parts of a very much larger document to be developed
   more quickly in separation, using for example VSCode's LaTeX-Workshop.
+
+  options:
+    -h, --help   This help text
 
   """)
   exit(1)
@@ -173,6 +179,11 @@ def assembleCmd(progArgs, config) :
 #################################################################
 # RUN Pygmentize
 
+localLexers = {
+  'MetaFunLexer' : 'pygmentsLexers.py:MetaFunLexer'
+  #'MetaFunLexer' : 'pygmentsLexers.py'
+}
+
 def runPygmentize(config, pygmentFilePath, codeType) :
   if not os.path.exists(pygmentFilePath+'.out') :
     print(f"Attempting to Pygmentitze [{pygmentFilePath}]")
@@ -183,9 +194,16 @@ def runPygmentize(config, pygmentFilePath, codeType) :
     print(f"Could not find codeType [{codeType}] using 'plainText'")
     codeType = 'plainText'
   pLexer, pOpts = config['pygments'][codeType].split(':')
-  pLexer = pLexer.removesuffix('Lexer').lower()
+  if pLexer in localLexers :
+    pLexer = localLexers[pLexer]
+    pythonCodeDir = os.path.dirname(os.path.realpath(__file__))
+    pLexer = os.path.join(pythonCodeDir, pLexer)
+  else :
+    pLexer = pLexer.removesuffix('Lexer').lower()
   pygmentsCmd = [
     'pygmentize',
+    '-x',
+    '-v',
     '-f latex',
     '-l {pLexer}',
     '-o {pygmentFilePath}'
@@ -399,7 +417,7 @@ def runLuaLaTeX(config, jobName, codeType) :
     print("All up to date!")
     return
 
-  for runNum in range(10) :
+  for runNum in range(maxLuaTexRuns) :
     print("-----------------------------------------------------------------")
     print(f"run: {runNum}")
     print("cmd:")
