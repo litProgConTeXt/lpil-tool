@@ -179,11 +179,6 @@ def assembleCmd(progArgs, config) :
 #################################################################
 # RUN Pygmentize
 
-localLexers = {
-  'MetaFunLexer' : 'pygmentsLexers.py:MetaFunLexer'
-  #'MetaFunLexer' : 'pygmentsLexers.py'
-}
-
 def runPygmentize(config, pygmentFilePath, codeType) :
   if not os.path.exists(pygmentFilePath+'.out') :
     print(f"Attempting to Pygmentitze [{pygmentFilePath}]")
@@ -194,30 +189,17 @@ def runPygmentize(config, pygmentFilePath, codeType) :
     print(f"Could not find codeType [{codeType}] using 'plainText'")
     codeType = 'plainText'
   pLexer, pOpts = config['pygments'][codeType].split(':')
-  if pLexer in localLexers :
-    pLexer = localLexers[pLexer]
-    pythonCodeDir = os.path.dirname(os.path.realpath(__file__))
-    pLexer = os.path.join(pythonCodeDir, pLexer)
-  else :
-    pLexer = pLexer.removesuffix('Lexer').lower()
   pygmentsCmd = [
-    'pygmentize',
-    '-x',
-    '-v',
-    '-f latex',
-    '-l {pLexer}',
-    '-o {pygmentFilePath}'
+    'lpilPygmentize',
+    pLexer,
+    pygmentFilePath+'.out',
+    pygmentFilePath
   ]
-  if pOpts : pygmentsCmd.append('-O {pOpts}')
-  pygmentsCmd.append('{pygmentFilePath}.out')
-  pygmentsCmd = assembleCmd(pygmentsCmd, {
-    'pygmentFilePath' : pygmentFilePath,
-    'pOpts'           : pOpts,
-    'pLexer'          : pLexer
-  })
-
+  if pOpts : pygmentsCmd.append(pOpts)
+  pygmentsCmd = " ".join(pygmentsCmd)
+  
   print("-----------------------------------------------------------------")
-  print("pygmentize cmd:")
+  print("lpilPygmentize cmd:")
   print(pygmentsCmd)
   print("-----------------------------------------------------------------")
   sys.stdout.flush()
