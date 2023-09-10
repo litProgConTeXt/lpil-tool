@@ -188,7 +188,11 @@ def runPygmentize(config, pygmentFilePath, codeType) :
   if codeType not in config['pygments'] :
     print(f"Could not find codeType [{codeType}] using 'plainText'")
     codeType = 'plainText'
-  pLexer, pOpts = config['pygments'][codeType].split(':')
+
+  # we use the '|' since Pygments uses the ':' for loading specific Lexers from 
+  # files by separating the path from the class name of the Lexer using the ':'.
+  pLexer, pOpts = config['pygments'][codeType].split('|')
+
   pygmentsCmd = [
     'lpilPygmentize',
     pLexer,
@@ -445,10 +449,10 @@ def runLuaLaTeX(config, jobName, codeType) :
       print("DIFFERENCES found....")
       sys.stdout.flush()
       if filesToTypeset :
-        print("  need to re-typeset dependent files")
+        print("Need to re-typeset dependent files")
         sys.stdout.flush()
         for aFile in filesToTypeset :
-          print(f"    typesetting [{aFile}]({config['deps'][aFile]})")
+          print(f"\nTypesetting [{aFile}]({config['deps'][aFile]})")
           sys.stdout.flush()
           taskType = config['deps'][aFile]
           taskOpts = None
