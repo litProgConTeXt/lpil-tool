@@ -189,9 +189,30 @@ def runPygmentize(config, pygmentFilePath, codeType) :
     print(f"Could not find codeType [{codeType}] using 'plainText'")
     codeType = 'plainText'
 
+  # Split off the Pygments Options if there are any...
+  #
   # we use the '|' since Pygments uses the ':' for loading specific Lexers from 
   # files by separating the path from the class name of the Lexer using the ':'.
-  pLexer, pOpts = config['pygments'][codeType].split('|')
+  pygmentConfig = config['pygments'][codeType]
+  pOpts = None
+  if -1 < pygmentConfig.find('|') :
+    pLexer, pOpts = pygmentConfig.split('|')
+  else :
+    pLexer = pygmentConfig
+
+  # Now, IF the Pygments lexer is a path/class-name
+  # expand the user '~' (if there is any)
+  if -1 < pLexer.find('~') :
+    pLexerClass = None
+    if -1 < pLexer.find(':') :
+      pLexerPath, pLexerClass = pLexer.split(':')
+    else : 
+      pLexerPath = pLexer
+    pLexerPath = os.path.abspath(os.path.expanduser(pLexerPath))
+    if pLexerClass :
+      pLexer = pLexerPath+':'+pLexerClass
+    else :
+      pLexer = pLexerPath
 
   pygmentsCmd = [
     'lpilPygmentize',
@@ -237,6 +258,7 @@ def runMetafun(config, texFilePath, codeType) :
     for aSegment in outputDir.split(os.sep) :
       if 0 < len(aSegment) : dirSegs.append('..')
     relTexFilePath = os.path.join( *dirSegs, texFilePath )
+    os.makedirs(outputDir, exist_ok=True)
     os.chdir(outputDir)
 
   # metafun (context + pdftops)
