@@ -177,6 +177,26 @@ def assembleCmd(progArgs, config) :
   return " ".join(progArgs).format_map(config)
 
 #################################################################
+# RUN cmScan
+
+def runCMScan(config, cmScanFilePath, codeType) :
+  cmScanCmd = [
+    'cmScan',
+    os.path.splitext(os.path.basename(cmScanFilePath))[0]
+  ]
+  cmScanCmd = " ".join(cmScanCmd)
+  
+  print("-----------------------------------------------------------------")
+  print("cmScan cmd:")
+  print(cmScanCmd)
+  print("-----------------------------------------------------------------")
+  sys.stdout.flush()
+  result = os.system(cmScanCmd)
+  if result != 0 :
+    print(f"ERROR: the cmScan command returned: [{result}]")
+    return(result)
+
+#################################################################
 # RUN Pygmentize
 
 def runPygmentize(config, pygmentFilePath, codeType) :
@@ -492,11 +512,11 @@ def runLuaLaTeX(config, jobName, codeType) :
       sys.stdout.flush()
       return
 
-
 ##############################################################################
 # list the known commands and how to run them...
 
 knownCommands = {
+  'cmscan'   : runCMScan,
   'metafun'  : runMetafun,
   'lualatex' : runLuaLaTeX,
   'pygments' : runPygmentize
