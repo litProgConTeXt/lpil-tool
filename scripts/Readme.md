@@ -19,9 +19,12 @@ This script understands the following TeX-Magic comments:
 
 The `program` magic comment specifies which "program" to use to typeset the
 given document. This "program" must be one which the `lpilMagicRunner` script
-knows how to typeset. 
+knows how to typeset.
 
 At the moment the `lpilMagicRunner` script understands the following "programs":
+
+  - `cmScan` (our own [diSimplex Citation
+    Manager](https://github.com/diSimplex/citationManager))
 
   - `metafun` (essentially [ConTeXt](https://wiki.contextgarden.net/Main_Page)
     running its associated
@@ -32,6 +35,9 @@ At the moment the `lpilMagicRunner` script understands the following "programs":
 
   - `lualatex` (the [LuaLaTeX](https://www.luatex.org//) tool required by the
     [lpil-latex](https://github.com/litProgLaTeX/lpil-latex) style.)
+
+  - `pygments` (the [Pygments](https://pygments.org/) code syntax
+    highlighter)
 
 The `preamble` and `postamble` magic comments specify LaTeX fragments to be
 typeset immediately before or after the given `lualatex` document. This allows
