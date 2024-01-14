@@ -18,7 +18,7 @@ import json
 import os
 import shutil
 import sys
-#import yaml
+import yaml
 
 #maxLuaTexRuns = 1
 maxLuaTexRuns = 10
@@ -29,7 +29,7 @@ def usage() :
 
   where:
 
-    aTeXFile is a (manditory) TeX/LaTeX/ConTeXt document to be typeset
+    aTeXFile is a (mandatory) TeX/LaTeX/ConTeXt document to be typeset
 
     outputDir is an (optional) directory in which to capture the outputs
 
@@ -103,7 +103,7 @@ config['program']       = "lualatex"
 config['preamble']      = None
 config['postamble']     = None
 
-# read the begining of the file looking for TeX-Magic comments
+# read the beginning of the file looking for TeX-Magic comments
 with open(config['texFilePath']) as tf :
   while True :
     aLine = tf.readline()
@@ -130,8 +130,13 @@ with open(config['texFilePath']) as tf :
 #print("-------------------------------------------------------------")
 
 def reLoadDepsJson(config) :
+  print("\n------------reLoadDepsJson-----------")
+  print(yaml.dump(config))
+  print(  "-------------------------------------")
   if 'pygments' not in config : config['pygments'] = {}
-  if 'deps'     not in config : config['deps']     = {}
+  if 'deps'     not in config : config['deps']     = {
+    config['jobName']+'.tex' : 'tex'
+  }
   try :
     depsJsonPath = os.path.join(config['outputDir'],f"{config['jobName']}.deps.json")
     with open(depsJsonPath) as jFile :
@@ -201,7 +206,7 @@ def runCMScan(config, cmScanFilePath, codeType) :
 
 def runPygmentize(config, pygmentFilePath, codeType) :
   if not os.path.exists(pygmentFilePath+'.out') :
-    print(f"Attempting to Pygmentitze [{pygmentFilePath}]")
+    print(f"Attempting to Pygmentize [{pygmentFilePath}]")
     print("  ... but could not find file!")
     return
 
