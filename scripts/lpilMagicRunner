@@ -1,5 +1,43 @@
 #!/bin/env python
 
+# TODO:
+#
+# Parallelize this using ideas from:
+#  https://stackoverflow.com/a/63977974
+# Deal with interupts using ideas from:
+#  https://stackoverflow.com/a/30766124
+
+# NOTES:
+#
+# We assume that the "leaf" tasks:
+#  - runCMScan
+#  - runPygmentize
+#  - runMetafun (context; then spwan)
+#    - pdftopdfCmd (gs) (to create v1.5 pdf)
+#    - pdftopsCmd (pdftops) (to create eps)
+#    - pdftosvgCmd (pdftocairo) (to create svg)
+# can be done in parallel as they do not depend upon anything other than
+# themselves. Equally importantly each of these "leaf" tasks only need to
+# be run ONCE to provide useful results.
+#
+# Leaf-like tasks:
+#  - runPlasTeX (spawn dependent (leaf) tasks; then run luaLaTeX)
+# can only be run after all of the other "leaf" tasks have completed BUT
+# CAN be run in parallel with the "main" "runLuaLaTeX" task. HOW DO WE DO
+# THIS?
+#
+# Non-leaf tasks:
+#  - runLuaLaTeX
+# must be run until there are no further changes and on each "run" may
+# spawn "leaf" tasks. Each individual run of runLuaLaTeX needs to wait
+# until all of the spawned "leaf" tasks have completed.
+#
+
+# We deal with interupts by allowing any spawned processes to complete but
+# setting a signal so that no NEW processes start. We use the "displayer"
+# async process to chech and respond to the results of each process as it
+# completes, format and display the output and then set the signal.
+
 # This is a very simple and highly specific tool to:
 
 # 1. read the TeX-Magic comments in a TeX file to determine:
@@ -190,7 +228,7 @@ def runCMScan(config, cmScanFilePath, codeType) :
     os.path.splitext(os.path.basename(cmScanFilePath))[0]
   ]
   cmScanCmd = " ".join(cmScanCmd)
-  
+
   print("-----------------------------------------------------------------")
   print("cmScan cmd:")
   print(cmScanCmd)
@@ -216,7 +254,7 @@ def runPygmentize(config, pygmentFilePath, codeType) :
 
   # Split off the Pygments Options if there are any...
   #
-  # we use the '|' since Pygments uses the ':' for loading specific Lexers from 
+  # we use the '|' since Pygments uses the ':' for loading specific Lexers from
   # files by separating the path from the class name of the Lexer using the ':'.
   pygmentConfig = config['pygments'][codeType]
   pOpts = None
@@ -231,7 +269,7 @@ def runPygmentize(config, pygmentFilePath, codeType) :
     pLexerClass = None
     if -1 < pLexer.find(':') :
       pLexerPath, pLexerClass = pLexer.split(':')
-    else : 
+    else :
       pLexerPath = pLexer
     pLexerPath = os.path.abspath(os.path.expanduser(pLexerPath))
     if pLexerClass :
@@ -247,7 +285,7 @@ def runPygmentize(config, pygmentFilePath, codeType) :
   ]
   if pOpts : pygmentsCmd.append(pOpts)
   pygmentsCmd = " ".join(pygmentsCmd)
-  
+
   print("-----------------------------------------------------------------")
   print("lpilPygmentize cmd:")
   print(pygmentsCmd)
